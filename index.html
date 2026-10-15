@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitoreo de Peaks SEN</title>
+<style>
+:root{
+  color-scheme: light;
+  --page:#f9f9f7; --surface-1:#fcfcfb;
+  --ink-1:#0b0b0b; --ink-2:#52514e; --ink-muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --series-1:#2a78d6; --series-2:#eb6834;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --accent:#2a78d6; --accent-wash:rgba(42,120,214,.08);
+  --ghost:rgba(11,11,11,.04);
+  --shadow:0 1px 2px rgba(11,11,11,.04), 0 10px 28px rgba(11,11,11,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --page:#0d0d0d; --surface-1:#1a1a19;
+    --ink-1:#f0efec; --ink-2:#c3c2b7; --ink-muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --series-1:#3987e5; --series-2:#d95926;
+    --accent:#3987e5; --accent-wash:rgba(57,135,229,.12);
+    --ghost:rgba(255,255,255,.05);
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --page:#0d0d0d; --surface-1:#1a1a19;
+  --ink-1:#f0efec; --ink-2:#c3c2b7; --ink-muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+  --series-1:#3987e5; --series-2:#d95926;
+  --accent:#3987e5; --accent-wash:rgba(57,135,229,.12);
+  --ghost:rgba(255,255,255,.05);
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 28px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--page); color:var(--ink-1);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px 56px}
+
+/* ---------- encabezado ---------- */
+header{border-bottom:1px solid var(--border);margin-bottom:24px}
+.hrow{max-width:1240px;margin:0 auto;padding:22px 24px 20px;
+  display:flex;align-items:flex-start;gap:24px;flex-wrap:wrap}
+.brand{flex:1 1 420px;min-width:0}
+.eyebrow{font-size:10.5px;font-weight:650;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-muted);margin:0 0 7px}
+h1{font-size:21px;font-weight:650;letter-spacing:-.012em;margin:0;line-height:1.22}
+.sub{color:var(--ink-2);font-size:13px;margin:7px 0 0;max-width:68ch}
+.hmeta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);
+  border-radius:999px;padding:5px 11px;font-size:11.5px;color:var(--ink-2);
+  background:var(--surface-1);white-space:nowrap}
+.pill b{color:var(--ink-1);font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--good);flex:none}
+button.toggle{font:inherit;font-size:11.5px;color:var(--ink-2);cursor:pointer;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:999px;padding:5px 11px}
+button.toggle:hover{background:var(--ghost);color:var(--ink-1)}
+
+/* ---------- controles ---------- */
+.controls{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;
+  box-shadow:var(--shadow);padding:16px 18px;margin-bottom:18px;
+  display:grid;gap:18px;grid-template-columns:minmax(210px,1.1fr) minmax(250px,1.2fr) minmax(280px,1.5fr)}
+@media (max-width:900px){.controls{grid-template-columns:1fr}}
+.ctl{min-width:0}
+.ctl > label{display:block;font-size:10.5px;font-weight:650;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-muted);margin-bottom:8px}
+select{font:inherit;font-size:13.5px;width:100%;padding:8px 10px;color:var(--ink-1);
+  background:var(--page);border:1px solid var(--border);border-radius:8px;cursor:pointer}
+select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:flex;gap:3px;background:var(--page);border:1px solid var(--border);
+  border-radius:8px;padding:3px;overflow-x:auto}
+.seg button{flex:1 1 0;min-width:34px;font:inherit;font-size:12.5px;font-variant-numeric:tabular-nums;
+  padding:6px 4px;border:0;border-radius:6px;background:transparent;color:var(--ink-2);cursor:pointer;
+  white-space:nowrap}
+.seg button:hover{background:var(--ghost);color:var(--ink-1)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff;font-weight:600}
+.slider-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px}
+.kval{font-size:15px;font-weight:650;font-variant-numeric:tabular-nums}
+.khint{font-size:11px;color:var(--ink-muted)}
+input[type=range]{width:100%;margin:4px 0 0;accent-color:var(--accent);cursor:pointer}
+.kscale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-muted);
+  font-variant-numeric:tabular-nums;margin-top:2px}
+.kcal{font-size:11.5px;color:var(--ink-2);margin-top:7px}
+.kcal button{font:inherit;font-size:11.5px;color:var(--accent);background:none;border:0;
+  padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+
+/* ---------- indicadores ---------- */
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(6,1fr);margin-bottom:18px}
+@media (max-width:1040px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;
+  box-shadow:var(--shadow);padding:13px 14px 14px;min-width:0}
+.kpi .lbl{font-size:10.5px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-muted);display:flex;align-items:center;gap:5px}
+.kpi .val{font-size:24px;font-weight:650;letter-spacing:-.022em;margin-top:7px;line-height:1.1}
+.kpi .val small{font-size:13px;font-weight:550;color:var(--ink-2);letter-spacing:0}
+.kpi .foot{font-size:11px;color:var(--ink-muted);margin-top:3px}
+
+/* ---------- tarjetas ---------- */
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;
+  box-shadow:var(--shadow);padding:18px;margin-bottom:18px}
+.chead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;
+  flex-wrap:wrap;margin-bottom:14px}
+.chead h2{font-size:14.5px;font-weight:650;margin:0;letter-spacing:-.006em}
+.chead p{font-size:12px;color:var(--ink-2);margin:4px 0 0;max-width:76ch}
+.legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11.5px;color:var(--ink-2)}
+.lg{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.sw{width:15px;height:3px;border-radius:2px;flex:none}
+.sw.band{height:11px;border-radius:3px;opacity:.9}
+.sw.mk{width:10px;height:10px;border-radius:50%}
+.sw.hollow{width:9px;height:9px;border-radius:2px;transform:rotate(45deg);background:transparent;border:1.6px solid}
+.grid2{display:grid;gap:18px;grid-template-columns:1.35fr 1fr;margin-bottom:18px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+.grid2 .card{margin:0}
+svg{display:block;width:100%;height:auto;overflow:visible}
+.cwrap{position:relative}
+
+/* ---------- tooltip ---------- */
+.tip{position:absolute;pointer-events:none;opacity:0;transition:opacity .09s;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:9px;
+  box-shadow:var(--shadow);padding:9px 11px;font-size:12px;min-width:190px;z-index:5}
+.tip.on{opacity:1}
+.tip .tt{font-weight:650;font-size:12px;margin-bottom:6px;padding-bottom:6px;
+  border-bottom:1px solid var(--border)}
+.tip .tr{display:flex;justify-content:space-between;gap:16px;line-height:1.75}
+.tip .tr span:first-child{color:var(--ink-2);display:inline-flex;align-items:center;gap:6px}
+.tip .tr span:last-child{font-variant-numeric:tabular-nums;font-weight:600}
+.tip .tag{margin-top:7px;padding-top:7px;border-top:1px solid var(--border);
+  font-size:11.5px;display:flex;align-items:center;gap:6px}
+
+/* ---------- matriz de confusión ---------- */
+.cm{display:grid;grid-template-columns:auto 1fr 1fr;gap:3px;align-items:stretch}
+.cm .hd{font-size:10.5px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-muted);display:flex;align-items:flex-end;justify-content:center;padding:0 0 6px}
+.cm .rh{font-size:10.5px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-muted);display:flex;align-items:center;padding-right:10px;max-width:92px;line-height:1.3}
+.cell{border:1px solid var(--border);border-radius:9px;padding:12px;background:var(--page);min-width:0}
+.cell .cn{font-size:21px;font-weight:650;letter-spacing:-.02em;line-height:1.1}
+.cell .cl{font-size:11px;color:var(--ink-2);margin-top:3px;display:flex;align-items:center;gap:5px}
+.cell.hl{background:var(--accent-wash);border-color:var(--accent)}
+.rates{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;margin-top:12px;
+  border-top:1px solid var(--border);padding-top:12px}
+.rate .rv{font-size:16px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.rate .rl{font-size:10.5px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:.06em;
+  font-weight:650;margin-top:2px}
+
+/* ---------- ayuda en contexto ---------- */
+.info{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;
+  border-radius:50%;border:1px solid var(--ink-muted);color:var(--ink-muted);flex:none;
+  font-size:9px;font-weight:700;line-height:1;cursor:help;position:relative;
+  font-variant-numeric:normal}
+.info:hover,.info:focus-visible{border-color:var(--accent);color:var(--accent);outline:none}
+.info::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 9px);left:50%;
+  transform:translateX(-50%);width:238px;padding:10px 12px;border-radius:9px;
+  background:var(--surface-1);border:1px solid var(--border);box-shadow:var(--shadow);
+  color:var(--ink-2);font-size:11.5px;font-weight:400;line-height:1.55;text-align:left;
+  text-transform:none;letter-spacing:0;white-space:normal;
+  opacity:0;visibility:hidden;transition:opacity .12s;z-index:30;pointer-events:none}
+.info:hover::after,.info:focus-visible::after{opacity:1;visibility:visible}
+.info.der::after{left:auto;right:-10px;transform:none}
+.info.izq::after{left:-10px;transform:none}
+/* En pantallas angostas el globo ensancharía la página aunque esté oculto, y en
+   una pantalla táctil no hay cursor que lo invoque: ahí la guía desplegable
+   cumple la misma función. */
+@media (max-width:860px){ .info{display:none} }
+
+.guia summary{font-size:13px;font-weight:650;color:var(--ink-1)}
+.guia{margin:0 0 18px;border:0;padding:0;background:var(--surface-1);
+  border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:15px 18px}
+.guia[open]{padding-bottom:6px}
+.guia dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px;margin:14px 0 0}
+@media (max-width:820px){.guia dl{grid-template-columns:1fr}}
+.guia dt{font-size:12.5px;font-weight:650;margin-top:13px;color:var(--ink-1)}
+.guia dd{font-size:12px;color:var(--ink-2);margin:3px 0 0;line-height:1.55}
+.guia .cierre{font-size:12px;color:var(--ink-2);margin:18px 0 10px;padding-top:13px;
+  border-top:1px solid var(--border);line-height:1.6}
+.porque{font-size:12.5px;color:var(--ink-2);line-height:1.65;margin:14px 0 0;
+  padding:12px 14px;background:var(--page);border:1px solid var(--border);border-radius:9px}
+.porque b{color:var(--ink-1);font-weight:650}
+.porque p{margin:0}
+.porque p + p{margin-top:8px}
+
+/* ---------- estado actual ---------- */
+.origen{display:flex;align-items:center;gap:8px;flex:none}
+.origen label{font-size:10.5px;font-weight:650;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--ink-muted)}
+.origen select{font:inherit;font-size:13px;width:auto;padding:6px 9px;color:var(--ink-1);
+  background:var(--page);border:1px solid var(--border);border-radius:8px;cursor:pointer}
+.estado{display:grid;gap:20px;grid-template-columns:252px 1fr;align-items:start;
+  margin-bottom:4px}
+@media (max-width:860px){.estado{grid-template-columns:1fr}}
+.est-l{font-size:10.5px;font-weight:650;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-muted)}
+.est-v{font-size:25px;font-weight:650;letter-spacing:-.022em;line-height:1.15;margin-top:6px}
+.est-v small{font-size:13px;font-weight:550;color:var(--ink-2);letter-spacing:0}
+.est-f{font-size:11.5px;color:var(--ink-muted);margin-top:3px}
+.est-sep{height:1px;background:var(--border);margin:15px 0}
+.badge{display:inline-flex;align-items:center;gap:7px;border-radius:9px;
+  padding:9px 12px;font-size:13px;font-weight:650;line-height:1.3;margin-top:7px;
+  border:1px solid}
+.badge .sw{flex:none}
+
+/* ---------- tablas ---------- */
+table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:8px 9px;border-bottom:1px solid var(--border);white-space:nowrap}
+th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
+thead th{font-size:10.5px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-muted);border-bottom:1px solid var(--axis)}
+tbody tr:hover{background:var(--ghost)}
+tbody tr.hl{background:var(--accent-wash)}
+tbody tr.hl td:first-child{font-weight:650;box-shadow:inset 2px 0 0 var(--accent)}
+tbody tr:last-child td{border-bottom:0}
+td.best{font-weight:650}
+.tscroll{overflow-x:auto;margin:0 -4px;padding:0 4px}
+details{margin-top:14px;border-top:1px solid var(--border);padding-top:12px}
+summary{font-size:12px;color:var(--ink-2);cursor:pointer;font-weight:550}
+summary:hover{color:var(--ink-1)}
+details .tscroll{max-height:320px;overflow-y:auto;margin-top:12px}
+details thead th{position:sticky;top:0;background:var(--surface-1);z-index:1}
+.note{font-size:11.5px;color:var(--ink-muted);margin:10px 0 0;line-height:1.55}
+footer{border-top:1px solid var(--border);margin-top:28px;padding-top:16px;
+  font-size:11.5px;color:var(--ink-muted);line-height:1.65}
+footer b{color:var(--ink-2);font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <div class="brand">
+      <p class="eyebrow">Sistema Eléctrico Nacional · Chile</p>
+      <h1>Monitoreo y alerta temprana de peaks extremos de demanda</h1>
+      <p class="sub">Pronóstico de la demanda máxima diaria a siete días y emisión de alertas
+      según el criterio de la Ecuación 3.4. El umbral de alerta se recalcula en el navegador:
+      todo lo que se muestra se deriva del pronóstico de cada modelo y del nivel base, el factor
+      de día de la semana y la dispersión congelados en el origen.</p>
+    </div>
+    <div class="hmeta">
+      <span class="pill"><span class="dot"></span>Prueba <b>ene–jul 2026</b></span>
+      <span class="pill">Horizonte <b>h = 1 … 7</b></span>
+      <button class="toggle" id="tema" type="button">Modo oscuro</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- CONTROLES -->
+  <section class="controls" aria-label="Controles del tablero">
+    <div class="ctl">
+      <label for="selModelo">Modelo</label>
+      <select id="selModelo"></select>
+    </div>
+    <div class="ctl">
+      <label id="lblH">Horizonte de pronóstico</label>
+      <div class="seg" id="segH" role="group" aria-labelledby="lblH"></div>
+    </div>
+    <div class="ctl">
+      <label for="rngK">Umbral de alerta <span style="text-transform:none;letter-spacing:0">(k)</span></label>
+      <div class="slider-head">
+        <span class="kval" id="kVal">0,35</span>
+        <span class="khint" id="kHint"></span>
+      </div>
+      <input type="range" id="rngK" min="-1" max="1.8" step="0.05" value="0.35"
+             aria-describedby="kCal">
+      <div class="kscale"><span>−1,00</span><span>0,40</span><span>1,80</span></div>
+      <div class="kcal" id="kCal"></div>
+    </div>
+  </section>
+
+  <!-- GUÍA DE LECTURA -->
+  <details class="guia">
+    <summary>¿Cómo leer este tablero?</summary>
+    <dl id="glosario"></dl>
+    <p class="cierre">El tablero evalúa un esquema de alerta temprana, no solo un pronóstico.
+    Primero se predice la demanda máxima de cada uno de los siete días siguientes; después se
+    compara esa predicción con el nivel que correspondería a ese día, y se emite alerta cuando
+    la diferencia supera el umbral. Por eso un modelo puede tener buen error de pronóstico y
+    aun así detectar pocos eventos: son dos preguntas distintas.</p>
+  </details>
+
+  <!-- ESTADO ACTUAL -->
+  <section class="card" id="cardEstado">
+    <div class="chead">
+      <div>
+        <h2>Estado del sistema</h2>
+        <p id="pEstado"></p>
+      </div>
+      <div class="origen">
+        <label for="selOrigen">Origen</label>
+        <select id="selOrigen"></select>
+        <button class="toggle" id="btnUltimo" type="button">Último</button>
+      </div>
+    </div>
+    <div class="estado">
+      <div id="estRes"></div>
+      <div class="cwrap">
+        <svg id="svgEst" viewBox="0 0 560 210" role="img"
+             aria-label="Desviación pronosticada respecto del nivel esperado, por día"></svg>
+      </div>
+    </div>
+    <div class="tscroll"><table id="tabEst"></table></div>
+    <div class="porque" id="porque"></div>
+    <p class="note" id="notaEst"></p>
+  </section>
+
+  <!-- INDICADORES -->
+  <section class="kpis" id="kpis" aria-label="Indicadores"></section>
+
+  <!-- SERIE -->
+  <section class="card">
+    <div class="chead">
+      <div>
+        <h2 id="tSerie">Demanda observada y pronosticada</h2>
+        <p id="pSerie"></p>
+      </div>
+      <div class="legend" id="legSerie"></div>
+    </div>
+    <div class="cwrap" id="wrapSerie">
+      <svg id="svgSerie" viewBox="0 0 980 420" role="img"
+           aria-labelledby="tSerie" aria-describedby="pSerie"></svg>
+      <div class="tip" id="tipSerie"></div>
+    </div>
+    <details>
+      <summary>Ver los datos de este gráfico en tabla</summary>
+      <div class="tscroll"><table id="tabSerie"></table></div>
+    </details>
+  </section>
+
+  <div class="grid2">
+    <!-- CALIBRACIÓN -->
+    <section class="card">
+      <div class="chead">
+        <div>
+          <h2>Calibración del umbral sobre validación</h2>
+          <p id="pCal">Puntaje F1 del modelo en 2025 para cada valor de k. El umbral se elige
+          aquí y se aplica sin cambios al conjunto de prueba, de modo que el valor de k nunca
+          se ajusta mirando 2026.</p>
+        </div>
+      </div>
+      <div class="cwrap" id="wrapCal">
+        <svg id="svgCal" viewBox="0 0 520 250" role="img" aria-labelledby="pCal"></svg>
+        <div class="tip" id="tipCal"></div>
+      </div>
+    </section>
+
+    <!-- MATRIZ -->
+    <section class="card">
+      <div class="chead">
+        <div>
+          <h2>Matriz de confusión</h2>
+          <p id="pCm"></p>
+        </div>
+      </div>
+      <div class="cm" id="cm"></div>
+      <div class="rates" id="rates"></div>
+      <p class="note" id="notaCm"></p>
+    </section>
+  </div>
+
+  <!-- POR HORIZONTE -->
+  <section class="card">
+    <div class="chead">
+      <div>
+        <h2>Desempeño por horizonte</h2>
+        <p>Las siete filas corresponden a los siete días de la trayectoria, con el umbral de
+        alerta actual. La fila resaltada es la seleccionada arriba.</p>
+      </div>
+    </div>
+    <div class="tscroll"><table id="tabH"></table></div>
+    <p class="note" id="notaH"></p>
+  </section>
+
+  <footer>
+    <b>Fuente de los datos:</b> Portal Energía Abierta, Comisión Nacional de Energía.
+    Demanda máxima diaria del SEN.<br>
+    <b>Conjunto de prueba:</b> 1 de enero al 31 de julio de 2026 · 212 días objetivo ·
+    <span id="fEval"></span> pronósticos por modelo · <span id="fEv"></span> eventos extremos
+    etiquetados con k = 1,75.<br>
+    <b>Criterio de alerta:</b> ẑ = (ŷ / (b · f) − 1) / σ, con b y σ congelados en el origen del
+    pronóstico y f correspondiente al día objetivo (Ecuación 3.4). Se emite alerta cuando ẑ &gt; k.<br>
+    <b>Página autocontenida:</b> incorpora los datos y los resultados de los modelos, no requiere
+    conexión a un servidor y se regenera con el notebook <code>09_esquema_tablero.ipynb</code>.<br>
+    Diego Venegas Cáceres · Isaías Márquez Salas — Universidad Bernardo O'Higgins,
+    Ingeniería en Informática.
+  </footer>
+</div>
+
+<script>
+"use strict";
+const D = {"fechas":["2026-01-01","2026-01-02","2026-01-03","2026-01-04","2026-01-05","2026-01-06","2026-01-07","2026-01-08","2026-01-09","2026-01-10","2026-01-11","2026-01-12","2026-01-13","2026-01-14","2026-01-15","2026-01-16","2026-01-17","2026-01-18","2026-01-19","2026-01-20","2026-01-21","2026-01-22","2026-01-23","2026-01-24","2026-01-25","2026-01-26","2026-01-27","2026-01-28","2026-01-29","2026-01-30","2026-01-31","2026-02-01","2026-02-02","2026-02-03","2026-02-04","2026-02-05","2026-02-06","2026-02-07","2026-02-08","2026-02-09","2026-02-10","2026-02-11","2026-02-12","2026-02-13","2026-02-14","2026-02-15","2026-02-16","2026-02-17","2026-02-18","2026-02-19","2026-02-20","2026-02-21","2026-02-22","2026-02-23","2026-02-24","2026-02-25","2026-02-26","2026-02-27","2026-02-28","2026-03-01","2026-03-02","2026-03-03","2026-03-04","2026-03-05","2026-03-06","2026-03-07","2026-03-08","2026-03-09","2026-03-10","2026-03-11","2026-03-12","2026-03-13","2026-03-14","2026-03-15","2026-03-16","2026-03-17","2026-03-18","2026-03-19","2026-03-20","2026-03-21","2026-03-22","2026-03-23","2026-03-24","2026-03-25","2026-03-26","2026-03-27","2026-03-28","2026-03-29","2026-03-30","2026-03-31","2026-04-01","2026-04-02","2026-04-03","2026-04-04","2026-04-05","2026-04-06","2026-04-07","2026-04-08","2026-04-09","2026-04-10","2026-04-11","2026-04-12","2026-04-13","2026-04-14","2026-04-15","2026-04-16","2026-04-17","2026-04-18","2026-04-19","2026-04-20","2026-04-21","2026-04-22","2026-04-23","2026-04-24","2026-04-25","2026-04-26","2026-04-27","2026-04-28","2026-04-29","2026-04-30","2026-05-01","2026-05-02","2026-05-03","2026-05-04","2026-05-05","2026-05-06","2026-05-07","2026-05-08","2026-05-09","2026-05-10","2026-05-11","2026-05-12","2026-05-13","2026-05-14","2026-05-15","2026-05-16","2026-05-17","2026-05-18","2026-05-19","2026-05-20","2026-05-21","2026-05-22","2026-05-23","2026-05-24","2026-05-25","2026-05-26","2026-05-27","2026-05-28","2026-05-29","2026-05-30","2026-05-31","2026-06-01","2026-06-02","2026-06-03","2026-06-04","2026-06-05","2026-06-06","2026-06-07","2026-06-08","2026-06-09","2026-06-10","2026-06-11","2026-06-12","2026-06-13","2026-06-14","2026-06-15","2026-06-16","2026-06-17","2026-06-18","2026-06-19","2026-06-20","2026-06-21","2026-06-22","2026-06-23","2026-06-24","2026-06-25","2026-06-26","2026-06-27","2026-06-28","2026-06-29","2026-06-30","2026-07-01","2026-07-02","2026-07-03","2026-07-04","2026-07-05","2026-07-06","2026-07-07","2026-07-08","2026-07-09","2026-07-10","2026-07-11","2026-07-12","2026-07-13","2026-07-14","2026-07-15","2026-07-16","2026-07-17","2026-07-18","2026-07-19","2026-07-20","2026-07-21","2026-07-22","2026-07-23","2026-07-24","2026-07-25","2026-07-26","2026-07-27","2026-07-28","2026-07-29","2026-07-30","2026-07-31"],"y":[10422.2,12034.2,11584.4,10787.6,11968.2,12277.2,12042.8,12262.3,12629.3,11998.7,11349.9,12212.4,11847.7,11781.9,11936.5,12055.6,11590.8,10759.8,12796.4,12709.8,12286.3,12542.8,12768.2,11479.6,11050.7,12763.4,13130.6,13191.8,13213.8,12600.6,11949.9,11050.5,12789.3,12532.4,12328.8,12299.0,12492.3,12021.5,11275.7,12619.7,12223.3,12006.4,12131.9,12375.1,11556.1,10639.4,12153.6,12346.4,12025.1,12175.8,12454.9,11638.6,11148.1,12905.5,12856.7,12633.0,12424.8,12420.2,11988.1,11326.2,12679.3,12261.8,12227.8,12248.8,12503.4,11715.3,10889.6,12508.8,12562.9,12888.2,13018.3,12949.2,11906.5,11230.5,12628.5,12673.5,12617.8,12579.2,12370.6,11986.0,11785.6,12230.9,12157.3,11979.8,12427.4,12117.7,11710.0,11074.3,12567.8,12609.3,12388.3,11943.3,11344.4,11441.4,11115.5,12009.8,12249.3,12009.5,12361.8,12406.7,11456.9,11131.3,12147.6,12486.2,11735.8,11958.2,11817.0,11494.7,10840.5,12377.6,12242.8,12051.6,11967.3,12233.5,11693.2,11046.6,12580.9,12452.4,12077.9,12350.1,11173.9,11507.6,11427.2,12409.8,12258.6,12395.3,12475.4,12484.2,11700.5,11126.5,12508.9,12724.2,12345.7,12431.4,12578.4,11737.1,11100.6,12489.3,12715.6,13125.0,12409.0,13223.2,13039.1,12383.9,12998.2,12653.2,12934.3,12685.5,12680.2,11985.7,11940.5,13206.9,12998.5,13112.5,12915.9,13360.0,12227.6,11823.8,12952.2,13570.4,14151.8,13104.1,13492.3,12745.4,12381.2,13538.0,12986.0,13267.1,13045.4,13521.4,12807.8,12663.7,13354.9,13668.2,13498.5,13167.6,13024.0,12515.5,12036.7,12357.5,13693.0,13611.1,13323.3,13016.3,13167.0,12468.6,13990.4,13574.8,13254.0,13652.0,13706.3,13016.8,12372.7,13321.7,13960.2,13453.9,11356.7,11911.8,10707.6,10723.1,11869.8,13306.6,13231.4,13073.5,13036.6,12417.1,12162.8,13549.6,13363.8,13600.7,12955.2,12895.4],"etiqueta":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"f":[1.01866,1.04242,0.96972,0.90952,1.03254,1.049,1.02696,0.9996,1.03811,0.97,0.90813,1.02632,1.04728,1.0277,0.99878,1.03897,0.97183,0.91447,1.02309,1.03971,1.01959,0.99371,1.03362,0.96971,0.90748,1.02266,1.03935,1.02152,0.99729,1.0378,0.97192,0.9129,1.02942,1.04762,1.02716,1.00013,1.03332,0.9734,0.91416,1.03563,1.0403,1.02239,0.99376,1.03138,0.97533,0.91482,1.0344,1.03246,1.01301,0.98404,1.02468,0.97001,0.90804,1.03384,1.02735,1.00873,0.99671,1.02221,0.96472,0.90555,1.03046,1.02646,1.00984,1.01758,1.02613,0.96756,0.90985,1.0364,1.02495,1.01059,1.0155,1.02284,0.96276,0.90334,1.03749,1.03038,1.01982,1.02422,1.02894,0.9631,0.90547,1.03262,1.02622,1.0191,1.02029,1.02028,0.96411,0.90892,1.02275,1.01221,1.00293,1.00922,1.01254,0.96045,0.90803,1.01919,1.01281,1.0028,1.00456,1.00006,0.95447,0.90633,1.01291,1.0143,1.00403,1.00872,1.00221,0.95551,0.9133,1.01502,1.01761,1.00287,1.00903,0.99823,0.95662,0.91262,1.01244,1.01412,0.99967,1.00692,0.99916,0.95632,0.91233,1.01436,1.01895,1.00076,1.01045,0.98762,0.95632,0.91993,1.01562,1.01787,0.99791,1.00693,0.98542,0.95658,0.92111,1.01693,1.02178,0.99885,1.00836,0.98998,0.95614,0.91618,1.0217,1.02919,1.0114,1.00785,1.00059,0.96812,0.92797,1.02445,1.02803,1.01589,1.01492,1.01332,0.9719,0.93461,1.03469,1.03259,1.02392,1.01632,1.01792,0.97458,0.93666,1.0374,1.0377,1.04249,1.02139,1.02652,0.97808,0.94343,1.03934,1.03552,1.04476,1.02256,1.02906,0.97939,0.9503,1.03688,1.03742,1.0487,1.02019,1.03727,0.97927,0.94644,1.02586,1.04137,1.05004,1.01831,1.03179,0.98392,0.94981,1.02939,1.0384,1.04795,1.02008,1.033,0.98733,0.95362,1.028,1.04075,1.04141,1.00129,1.01146,0.95722,0.93034,1.00938,1.03962,1.03674,0.99774,1.00839],"bo":[11966.7,12127.9,12127.9,12127.9,12238.7,12271.9,12314.1,12259.7,12130.4,12130.4,12130.4,12130.4,12130.4,12038.5,12038.5,12038.5,12038.5,12038.5,12038.5,12031.8,12027.4,12012.1,12012.1,12012.1,12012.1,12027.4,12027.4,12029.9,12038.5,12038.5,12038.5,12038.5,12038.5,12038.5,12038.5,12049.2,12134.0,12134.0,12134.0,12237.4,12237.4,12274.3,12292.7,12292.7,12292.7,12292.7,12313.9,12313.9,12313.9,12313.9,12352.0,12352.0,12352.0,12313.9,12313.9,12313.9,12261.1,12261.1,12261.1,12261.1,12261.1,12261.1,12261.1,12261.1,12261.1,12261.1,12261.1,12261.1,12242.6,12225.5,12225.5,12225.5,12225.5,12225.5,12225.5,12238.3,12255.3,12304.1,12304.1,12304.1,12304.1,12383.3,12422.5,12439.9,12479.1,12464.1,12464.1,12464.1,12422.5,12395.4,12316.2,12316.2,12255.3,12255.3,12255.3,12255.3,12309.7,12379.5,12379.5,12300.8,12300.8,12300.8,12194.1,12194.1,12137.5,12137.5,12137.5,12137.5,12137.5,12132.6,12132.6,12063.7,12009.6,11997.7,11994.6,11994.6,11994.6,11994.6,12009.6,11988.4,11988.4,11988.4,11988.4,11988.4,11988.4,11988.4,12009.6,12009.6,12009.6,12009.6,12030.6,12030.6,12064.8,12064.8,12064.8,12064.8,12064.8,12064.8,12064.8,12155.7,12238.1,12250.7,12250.7,12250.7,12250.7,12302.1,12347.9,12372.7,12402.1,12409.4,12409.4,12409.4,12409.4,12420.6,12453.4,12479.8,12479.8,12479.8,12486.8,12499.1,12543.6,12615.8,12666.7,12666.7,12666.7,12682.9,12682.9,12700.5,12815.7,12925.1,12925.1,12925.1,12943.2,12969.1,12969.1,12992.1,12992.1,12969.1,12969.1,12969.1,12992.2,13022.0,13074.8,13074.8,13074.8,13074.8,13034.7,13074.8,13074.8,13135.9,13074.8,13135.5,13135.5,13167.3,13167.3,13167.3,13210.8,13210.8,13210.8,13210.8,13210.8,13260.5,13287.9,13287.9,13210.8,13210.8,13210.8,13167.3,13167.3,13167.3,13120.2,13120.2,13120.2,13120.2,13199.2,13199.2,13199.2,13120.2,13120.2],"so":[0.030453,0.030393,0.030481,0.030306,0.030529,0.030335,0.030242,0.035487,0.036144,0.036168,0.03628,0.036661,0.03689,0.036738,0.036705,0.036707,0.036549,0.036716,0.036754,0.037217,0.037296,0.03724,0.03741,0.037377,0.037432,0.037668,0.037619,0.037492,0.037834,0.037867,0.037759,0.037726,0.037835,0.038122,0.038798,0.039296,0.038272,0.038266,0.038276,0.038309,0.038394,0.038484,0.038438,0.038506,0.038475,0.038475,0.038496,0.038805,0.0391,0.038894,0.038891,0.039061,0.039582,0.039888,0.039778,0.039931,0.039847,0.03974,0.039456,0.039307,0.039201,0.039275,0.039351,0.039379,0.039335,0.03912,0.039054,0.039053,0.038957,0.038602,0.037992,0.037908,0.037914,0.03785,0.037435,0.03732,0.03752,0.037863,0.037992,0.037991,0.038012,0.037966,0.037835,0.037642,0.037428,0.037428,0.037382,0.037511,0.037814,0.038051,0.035506,0.035497,0.035375,0.035238,0.034716,0.034686,0.034768,0.030114,0.029861,0.031348,0.031422,0.031137,0.031221,0.031073,0.031007,0.031027,0.030969,0.030637,0.030682,0.03012,0.029837,0.030037,0.029901,0.029937,0.029894,0.029514,0.029516,0.029519,0.028971,0.028793,0.028912,0.028976,0.02868,0.028436,0.027384,0.024977,0.02513,0.02588,0.025894,0.026228,0.026318,0.026294,0.026554,0.026712,0.027281,0.027343,0.027352,0.027138,0.027096,0.02726,0.027223,0.027335,0.026657,0.026219,0.026047,0.02582,0.026788,0.026772,0.027911,0.029739,0.031053,0.031084,0.031061,0.03116,0.031145,0.031161,0.031141,0.031272,0.031253,0.031218,0.031273,0.031272,0.031498,0.031394,0.031337,0.031395,0.031327,0.032271,0.032198,0.032327,0.032329,0.032312,0.032277,0.032541,0.032589,0.032342,0.032333,0.032099,0.031644,0.031162,0.030503,0.030467,0.030165,0.030424,0.030571,0.030862,0.032516,0.032517,0.032084,0.030155,0.030387,0.030415,0.029922,0.030003,0.02993,0.030428,0.030413,0.030334,0.030347,0.030365,0.03053,0.030138,0.030327,0.035239,0.038233,0.042943,0.045889,0.047872,0.047983,0.048116,0.048075,0.048073,0.04808,0.047926,0.04792,0.04799,0.047928,0.047407,0.04748],"yx":[10619.5,12391.9,12025.5,11269.4,13093.1,12920.7,12535.4,10422.2,12034.2,11584.4,10787.6,11968.2,12277.2,12042.8,12262.3,12629.3,11998.7,11349.9,12212.4,11847.7,11781.9,11936.5,12055.6,11590.8,10759.8,12796.4,12709.8,12286.3,12542.8,12768.2,11479.6,11050.7,12763.4,13130.6,13191.8,13213.8,12600.6,11949.9,11050.5,12789.3,12532.4,12328.8,12299.0,12492.3,12021.5,11275.7,12619.7,12223.3,12006.4,12131.9,12375.1,11556.1,10639.4,12153.6,12346.4,12025.1,12175.8,12454.9,11638.6,11148.1,12905.5,12856.7,12633.0,12424.8,12420.2,11988.1,11326.2,12679.3,12261.8,12227.8,12248.8,12503.4,11715.3,10889.6,12508.8,12562.9,12888.2,13018.3,12949.2,11906.5,11230.5,12628.5,12673.5,12617.8,12579.2,12370.6,11986.0,11785.6,12230.9,12157.3,11979.8,12427.4,12117.7,11710.0,11074.3,12567.8,12609.3,12388.3,11943.3,11344.4,11441.4,11115.5,12009.8,12249.3,12009.5,12361.8,12406.7,11456.9,11131.3,12147.6,12486.2,11735.8,11958.2,11817.0,11494.7,10840.5,12377.6,12242.8,12051.6,11967.3,12233.5,11693.2,11046.6,12580.9,12452.4,12077.9,12350.1,11173.9,11507.6,11427.2,12409.8,12258.6,12395.3,12475.4,12484.2,11700.5,11126.5,12508.9,12724.2,12345.7,12431.4,12578.4,11737.1,11100.6,12489.3,12715.6,13125.0,12409.0,13223.2,13039.1,12383.9,12998.2,12653.2,12934.3,12685.5,12680.2,11985.7,11940.5,13206.9,12998.5,13112.5,12915.9,13360.0,12227.6,11823.8,12952.2,13570.4,14151.8,13104.1,13492.3,12745.4,12381.2,13538.0,12986.0,13267.1,13045.4,13521.4,12807.8,12663.7,13354.9,13668.2,13498.5,13167.6,13024.0,12515.5,12036.7,12357.5,13693.0,13611.1,13323.3,13016.3,13167.0,12468.6,13990.4,13574.8,13254.0,13652.0,13706.3,13016.8,12372.7,13321.7,13960.2,13453.9,11356.7,11911.8,10707.6,10723.1,11869.8,13306.6,13231.4,13073.5,13036.6,12417.1,12162.8,13549.6,13363.8,13600.7,12955.2,12895.4],"modelos":["SARIMAX","CatBoost","Prophet","LSTM","Persistencia","Estacional ingenuo"],"yhat":{"SARIMAX":[11929.0,11872.5,11866.7,11681.1,11698.3,11627.4,11567.8,11869.5,12673.0,12620.2,12616.3,12487.7,12499.8,12448.1,11461.9,11374.0,11897.5,11846.2,11843.5,11752.8,11761.6,11105.9,11040.6,10983.3,11375.4,11326.2,11324.2,11258.0,12196.1,12365.8,12323.2,12280.4,12596.9,12545.6,12544.2,12238.1,12359.6,12470.2,12438.3,12403.7,12668.5,12626.8,12219.9,12199.0,12278.2,12361.0,12335.3,12306.3,12531.7,11772.2,11850.1,11836.5,11895.8,11962.7,11941.1,11916.5,12508.6,12232.5,12237.4,12227.2,12275.1,12331.0,12312.7,11891.0,11823.0,11636.2,11598.4,11590.2,11630.2,11677.8,11377.6,11317.0,11271.0,11150.0,11098.1,11091.3,11125.3,12496.6,12512.2,12471.2,12441.4,12358.4,12305.2,12299.3,12433.4,12593.5,12604.1,12577.5,12557.1,12498.2,12440.4,12000.5,12330.4,12438.7,12445.6,12427.3,12412.8,12368.6,11720.5,11857.9,12081.2,12151.3,12156.0,12143.1,12132.2,12257.1,12145.5,12296.7,12441.2,12489.4,12492.7,12483.0,11513.1,11617.2,11542.7,11700.0,11799.2,11833.3,11835.9,11102.6,11062.5,11131.9,11076.1,11225.8,11296.1,11321.8,12021.1,12198.3,12171.5,12223.5,12179.9,12328.5,12381.4,12513.8,12113.3,12231.5,12211.4,12252.0,12217.4,12358.4,12410.6,12309.3,12042.1,12130.6,12114.9,12147.3,12119.4,12140.9,12170.2,12102.7,11902.5,11971.7,11959.2,11985.2,12594.3,12400.0,12398.7,12348.1,12191.6,12246.7,12236.6,11985.5,11901.4,11762.1,11752.7,11713.2,11588.7,11632.9,11133.2,11377.8,11317.5,11209.5,11203.3,11171.8,11071.8,12364.1,12404.0,12579.4,12532.7,12447.6,12419.9,12394.6,12573.4,12380.3,12409.0,12544.9,12508.1,12440.6,12401.7,12628.6,12359.2,12220.8,12242.9,12350.0,12320.8,12266.7,12731.2,12445.5,12252.3,12145.0,12162.5,12247.5,12224.0,13067.7,12811.7,12627.4,12477.7,12393.2,12407.1,12475.2,11891.8,12139.5,11974.0,11828.5,11710.6,11643.5,11654.6,11425.5,11394.7,11554.8,11431.7,11304.7,11211.1,11157.4,12487.8,12686.7,12666.8,12786.0,12687.0,12571.7,12496.7,12755.0,12595.0,12723.6,12708.8,12804.6,12722.0,12616.4,12471.4,12589.5,12486.1,12581.8,12569.9,12649.7,12579.7,12339.6,12424.9,12501.2,12424.3,12501.1,12491.2,12559.0,12408.6,12430.1,12493.3,12550.1,12488.3,12552.4,12544.0,11734.3,11690.0,11703.8,11758.3,11804.0,11752.4,11806.9,11336.3,11184.2,11155.6,11165.9,11218.3,11256.4,11212.6,12582.0,12614.1,12516.1,12494.9,12503.2,12548.9,12581.2,12583.7,12563.7,12584.4,12511.8,12494.8,12501.6,12545.3,12244.6,12435.5,12422.6,12438.0,12379.8,12365.7,12371.5,12119.7,12246.6,12369.7,12360.1,12372.4,12324.1,12312.2,12268.1,12261.9,12354.4,12445.5,12437.9,12448.1,12407.2,11669.9,11615.1,11610.9,11683.0,11756.0,11749.7,11758.3,11070.9,11129.3,11092.8,11089.7,11144.1,11204.7,11199.3,12165.6,12386.9,12425.8,12398.2,12395.7,12444.5,12495.8,12170.6,12176.8,12324.0,12353.4,12331.4,12329.4,12372.5,12171.4,12081.2,12085.3,12196.6,12220.0,12202.2,12200.5,12077.8,12156.4,12096.5,12099.6,12188.1,12207.1,12192.5,12269.4,12219.0,12270.4,12225.0,12227.5,12299.4,12314.9,11658.8,11563.4,11530.5,11570.8,11534.8,11536.8,11595.7,11037.3,11047.7,10985.3,10960.5,11000.7,10971.4,10973.1,12388.6,12331.7,12338.4,12291.6,12271.9,12298.1,12274.0,12609.5,12343.9,12306.6,12311.7,12274.3,12258.2,12279.9,12467.8,12340.8,12167.0,12139.0,12143.1,12112.5,12099.1,12481.9,12387.5,12304.4,12173.9,12151.6,12154.9,12129.6,12505.9,12536.3,12467.5,12405.1,12301.0,12282.8,12285.5,11697.1,11742.7,11762.4,11703.9,11654.1,11569.0,11553.8,11309.1,11154.4,11184.0,11198.6,11145.3,11104.6,11034.0,12596.7,12587.5,12487.1,12509.1,12520.8,12470.3,12436.5,12572.4,12528.5,12522.5,12447.9,12465.4,12475.1,12426.2,12197.3,12362.3,12333.8,12329.4,12269.8,12284.3,12292.4,12209.8,12197.6,12304.7,12283.5,12280.0,12230.9,12243.0,12329.3,12308.6,12303.0,12382.6,12365.7,12362.8,12321.6,11739.2,11646.9,11633.5,11632.2,11695.7,11681.8,11679.4,11159.1,11171.8,11111.8,11101.8,11106.2,11158.6,11146.9,12309.7,12452.5,12460.8,12416.1,12408.1,12410.4,12454.4,12356.0,12250.5,12343.4,12349.5,12313.9,12307.4,12310.7,12310.1,12200.5,12131.8,12201.0,12205.9,12176.6,12171.1,12578.2,12242.0,12170.7,12119.6,12174.7,12178.8,12154.2,12849.5,12597.3,12339.3,12286.2,12245.5,12290.9,12294.2,12056.6,11999.5,11816.2,11630.6,11588.3,11554.8,11592.7,11228.7,11314.7,11273.2,11139.1,11068.3,11033.5,11005.4,12567.6,12566.5,12629.0,12598.6,12500.1,12389.5,12360.4,12485.7,12450.8,12450.0,12495.7,12473.4,12400.7,12319.1,12493.1,12385.4,12360.0,12359.5,12393.1,12376.6,12322.6,12527.1,12437.5,12359.3,12340.7,12340.3,12365.1,12352.9,12579.4,12552.6,12487.5,12430.3,12416.7,12416.4,12434.8,11667.3,11774.9,11756.6,11694.7,11652.6,11642.6,11642.3,11289.8,11125.7,11199.1,11185.2,11065.9,11034.9,11027.4,12798.2,12542.8,12430.7,12486.7,12475.7,12429.2,12406.2,12353.2,12645.5,12471.1,12385.6,12429.8,12421.0,12374.2,12245.5,12346.4,12545.9,12413.0,12345.6,12381.0,12373.8,12140.8,12282.8,12351.7,12503.8,12398.8,12344.8,12373.4,12382.3,12228.2,12313.2,12365.7,12485.8,12401.7,12358.0,11529.8,11672.0,11572.8,11640.9,11682.4,11778.6,11710.6,11220.8,11123.9,11215.5,11142.4,11204.5,11237.7,11315.5,12237.2,12315.9,12253.6,12321.0,12262.8,12309.1,12336.0,12394.7,12217.0,12267.7,12221.8,12275.5,12227.2,12269.9,12394.7,12279.4,12165.0,12202.3,12165.7,12210.3,12169.4,12223.8,12220.9,12146.6,12062.4,12092.1,12061.8,12099.5,11432.2,11581.3,11575.9,11521.2,11454.0,11478.7,11453.0,11000.7,11047.4,11143.6,11135.3,11091.8,11036.0,11057.0,11386.5,11152.3,11182.5,11253.7,11245.9,11209.7,11162.5,12310.4,12454.4,12303.2,12325.5,12382.3,12372.0,12341.4,12146.2,12305.9,12398.9,12287.0,12304.8,12351.7,12340.7,12176.8,12122.0,12225.2,12294.0,12204.8,12219.5,12259.0,12109.1,12204.3,12168.9,12245.2,12300.0,12226.4,12238.7,12244.0,12110.6,12179.4,12153.2,12214.0,12259.3,12197.3,11764.5,11678.6,11590.6,11646.6,11625.8,11676.0,11714.2,11050.8,11213.1,11156.4,11089.9,11143.2,11126.0,11168.3,12223.1,12180.6,12287.7,12244.9,12191.5,12233.3,12218.8,12212.3,12252.2,12224.1,12305.0,12270.6,12226.5,12264.2,12262.7,12118.1,12144.4,12123.3,12188.3,12159.9,12123.0,12016.7,12302.1,12206.7,12226.6,12209.6,12263.3,12239.5,12050.5,12081.8,12269.3,12197.2,12213.2,12199.1,12244.1,11352.1,11477.0,11497.2,11638.5,11580.7,11593.8,11582.1,11055.4,10979.1,11059.8,11074.7,11183.9,11136.1,11147.1,12003.2,12118.2,12068.9,12128.5,12140.4,12235.6,12195.6,12340.2,12139.8,12214.1,12177.7,12225.2,12235.1,12316.6,12028.5,12080.6,11951.3,12006.1,11977.1,12016.4,12024.8,12143.7,12136.2,12169.9,12074.3,12118.0,12094.0,12127.2,12014.5,12104.4,12105.0,12129.8,12053.6,12089.8,12069.6,11590.7,11478.9,11538.1,11540.5,11560.3,11497.2,11527.7,11153.6,11101.3,11027.8,11072.8,11089.7,11106.1,11052.9,12205.3,12259.9,12225.5,12169.6,12206.0,12213.6,12227.5,12445.5,12253.9,12289.8,12263.6,12218.4,12248.6,12257.1,12181.4,12177.8,12051.8,12079.1,12057.9,12020.5,12045.7,11970.3,12022.8,12020.5,11924.7,11946.7,11929.2,11897.8,11814.1,11617.2,11649.5,11647.7,11570.2,11588.5,11573.8,11432.9,11764.7,11636.9,11664.4,11663.0,11598.7,11614.0,11071.9,11033.1,11248.4,11152.5,11157.4,11156.2,11102.4,12441.2,12257.1,12231.9,12393.5,12316.2,12333.9,12332.9,12378.4,12394.8,12275.2,12256.4,12386.7,12322.3,12336.3,12084.9,12147.0,12157.6,12067.9,12052.6,12161.1,12106.8,12401.1,12227.5,12267.8,12275.7,12203.4,12190.7,12282.3,12265.5,12226.6,12109.4,12139.7,12146.1,12085.9,12075.2,11824.3,11709.6,11684.6,11587.7,11612.2,11617.5,11566.7,11337.8,11402.7,11329.0,11310.4,11228.8,11249.1,11253.6,12331.2,12442.0,12483.7,12429.0,12414.1,12336.7,12353.9,12435.7,12342.5,12413.7,12444.7,12400.8,12388.4,12318.6,12424.4,12273.1,12213.2,12266.0,12290.9,12254.4,12243.9,12434.8,12476.1,12378.8,12334.3,12376.6,12397.3,12366.4,12324.2,12326.0,12351.9,12279.7,12244.0,12279.3,12296.8,11870.9,11736.8,11738.0,11757.3,11699.4,11669.8,11699.6,11362.9,11433.4,11346.8,11347.6,11365.7,11317.6,11292.5,12359.7,12498.0,12543.6,12479.3,12480.0,12493.2,12452.5,12495.0,12426.7,12516.1,12549.9,12498.5,12499.1,12510.5,12240.6,12124.3,12080.1,12146.5,12173.6,12131.0,12131.5,12384.4,11915.0,11839.8,11807.0,11860.1,11882.4,11846.6,12776.6,12763.9,12450.5,12394.6,12368.4,12412.3,12431.2,12266.8,12034.6,12026.3,11784.7,11740.1,11718.4,11755.3,12128.2,11726.6,11575.9,11569.7,11371.4,11334.5,11316.2,13209.5,13076.5,12815.9,12703.1,12698.1,12525.0,12493.9,12998.8,13108.7,13022.4,12827.3,12736.5,12732.4,12580.6,12734.1,12913.9,12985.2,12920.6,12763.7,12688.3,12684.8,12866.1,12769.0,12885.6,12939.0,12887.0,12756.8,12693.2,12728.4,12821.1,12762.8,12850.1,12893.0,12849.9,12740.1,12153.0,12177.7,12238.6,12199.1,12269.3,12304.9,12268.6,11633.9,11719.7,11736.0,11782.0,11753.1,11811.4,11841.5,12849.5,12692.1,12748.5,12760.8,12797.8,12777.1,12826.2,12968.5,12785.1,12681.8,12724.5,12734.3,12764.9,12749.8,12927.5,12912.1,12791.7,12713.5,12747.9,12756.0,12781.6,12938.0,12850.5,12840.4,12749.4,12686.5,12714.8,12721.7,12863.9,12875.2,12823.9,12816.3,12743.0,12691.0,12714.7,12499.3,12247.2,12254.7,12220.6,12214.4,12153.8,12110.3,11908.0,12046.0,11878.4,11884.2,11866.5,11861.4,11810.7,12914.4,12957.2,13049.0,12920.4,12925.0,12911.8,12907.5,12878.0,12858.8,12887.3,12957.7,12853.2,12857.1,12850.9,13253.2,12901.4,12888.6,12910.5,12967.7,12880.9,12884.1,13564.8,13064.6,12830.6,12820.9,12838.6,12886.2,12813.3,13175.2,13421.2,13080.5,12901.0,12893.0,12907.8,12947.7,12630.7,12461.4,12620.3,12351.9,12206.0,12199.4,12211.8,12274.1,12212.8,12103.4,12221.5,11984.1,11862.9,11857.4,13305.1,13247.9,13208.4,13127.1,13222.1,13013.1,12911.4,13433.5,13309.2,13272.2,13242.8,13177.4,13256.9,13064.3,13243.0,13482.0,13401.7,13374.2,13350.6,13295.8,13363.7,13045.3,13042.0,13196.4,13136.7,13114.6,13094.9,13048.1,13169.8,13169.7,13176.4,13291.2,13243.1,13224.7,13207.8,12461.4,12274.6,12274.6,12287.0,12379.3,12339.1,12323.4,11857.0,11673.0,11552.3,11552.3,11568.7,11645.9,11611.6,13826.6,13398.1,13279.2,13189.4,13189.4,13208.2,13274.1,13299.7,13550.2,13273.3,13184.8,13112.5,13112.5,13133.7,13630.6,13434.8,13596.7,13390.7,13319.4,13259.0,13259.0,13249.2,13317.1,13190.6,13311.1,13145.2,13085.7,13034.1,13367.5,13410.2,13445.1,13351.0,13448.0,13309.3,13258.5,12503.4,12683.4,12711.5,12736.2,12660.5,12741.6,12623.3,12179.9,12173.6,12291.9,12313.2,12319.9,12256.5,12325.6,12567.5,12642.6,12638.4,12728.0,12745.2,12757.4,12703.4,13104.2,13214.3,13263.6,13260.5,13333.0,13347.4,13361.2,13530.3,13221.7,13294.0,13331.4,13328.8,13389.4,13401.5,13283.3,13215.2,13012.4,13067.2,13097.4,13095.3,13146.6,13387.7,13364.4,13296.0,13142.5,13186.8,13212.1,13210.3,12482.0,12698.5,12684.2,12634.4,12510.0,12547.1,12568.4,12764.4,12365.1,12498.2,12489.7,12422.2,12318.4,12349.7,13262.9,13435.3,13189.9,13269.6,13263.8,13218.5,13130.6,13843.4,13419.3,13525.3,13378.3,13432.5,13428.8,13366.8,13577.8,13734.3,13473.6,13537.1,13437.0,13471.7,13468.7,13149.3,13298.1,13394.4,13238.2,13281.4,13217.5,13245.7,13479.7,13214.5,13312.9,13370.6,13264.3,13291.8,13239.9,13006.4,12886.9,12715.2,12796.0,12835.3,12767.4,12789.9,12639.2,12633.8,12556.4,12428.1,12521.8,12546.8,12491.6,13382.1,13522.7,13519.2,13461.4,13357.8,13432.4,13452.8,13403.9,13435.8,13526.8,13524.1,13477.5,13390.7,13475.6,13501.3,13207.9,13228.5,13296.5,13294.3,13255.2,13181.1,12886.2,12901.0,12711.0,12726.4,12781.3,12779.6,12746.2,12629.0,13482.4,13478.8,13336.9,13349.3,13395.3,13393.8,11932.1,12332.3,12885.4,12874.1,12759.5,12769.9,12809.2,11175.9,11859.1,12118.5,12525.4,12515.9,12419.8,12428.7,12230.8,12483.5,12926.3,13117.1,13442.9,13418.2,13336.2,12449.5,12650.9,12814.7,13140.4,13293.2,13567.1,13543.0,13091.2,12612.9,12743.5,12864.0,13124.8,13253.2,13489.7,12747.9,12684.1,12374.1,12470.2,12566.6,12785.9,12896.8,12928.3,12752.7,12713.9,12485.9,12562.8,12643.9,12833.2,12270.5,12212.1,12097.5,12073.2,11890.6,11955.2,12025.3,12064.9,11985.8,11947.7,11862.5,11832.9,11679.4,11735.2,13031.1,12978.3,12926.7,12898.4,12830.4,12812.8,12680.2,13639.8,13360.1,13325.6,13287.2,13264.6,13208.5,13182.8,13306.5,13455.4,13272.9,13247.2,13216.6,13198.0,13150.9,13143.8,12977.3,13074.5,12938.8,12918.3,12893.1,12877.4,12982.9,13085.0,12969.8,13042.0,12933.8,12916.9,12895.7],"CatBoost":[10989.1,11264.8,11016.2,10593.0,10809.8,10786.2,10764.1,11968.5,12150.6,11760.3,11758.1,11480.1,11684.3,11800.4,11446.6,11375.3,11442.1,11035.5,10979.1,10851.8,11224.6,10738.7,10790.5,10847.4,10959.4,10614.9,10500.7,10750.1,11783.1,11908.6,12248.0,12189.3,12018.0,11747.5,11745.3,12012.0,12120.3,12037.8,12133.7,12254.5,12055.7,11888.4,11941.9,11996.5,11999.0,12008.4,12204.4,12104.6,12063.6,11543.0,11888.4,12034.5,11784.4,11759.4,11699.9,11670.2,12025.5,11973.5,12151.0,12078.8,12051.2,12162.7,12291.9,11581.4,11107.6,11380.8,11404.1,11598.2,11472.5,11604.4,11045.1,10853.1,10519.0,10817.8,10889.6,11046.3,11031.3,12122.0,12002.4,12022.4,11807.7,11985.4,12128.0,12195.7,12055.2,12139.9,12188.9,12060.5,12029.5,12185.7,12237.2,11769.5,11877.0,12051.5,12057.9,11999.9,11759.7,12071.0,11698.7,11741.4,11751.6,11677.1,11774.5,11928.5,11756.4,11922.8,11893.3,11735.4,11772.1,11849.8,11952.3,11991.0,11403.8,11267.4,11134.2,11097.6,11266.2,11229.6,11576.5,11041.7,10799.0,10745.8,10858.7,10798.5,10741.4,10986.0,11778.4,11845.9,11969.2,11969.6,11888.5,11842.4,11698.1,12411.5,11988.2,11848.3,12026.8,11983.4,11959.8,11732.7,12331.6,11989.5,11779.5,11919.1,11992.4,11967.2,11887.4,12148.6,11998.8,11903.4,11846.6,11992.0,11894.5,11728.6,12265.4,12144.1,12179.5,11967.4,12241.3,11983.1,11798.4,11867.1,11461.9,11458.1,11490.7,11337.4,11545.6,11554.0,11005.9,11106.7,10615.9,10817.3,10886.0,10747.7,11170.3,12220.6,12145.6,12168.4,12156.1,12029.8,12060.2,12041.4,12384.9,12271.4,12188.3,12252.4,12063.7,12252.7,12062.6,12269.8,12125.2,12074.9,12191.5,12075.0,12174.0,12076.9,12701.9,12135.2,11930.7,12194.1,12162.4,12201.4,12019.0,12629.1,12331.8,12105.9,12305.6,12323.7,12324.9,12212.6,11621.2,11417.5,11629.3,11736.9,11613.4,11852.8,11800.7,10944.6,10850.8,10888.5,10888.9,10720.6,10866.5,11152.8,12089.5,12159.7,12232.9,12194.1,12154.1,11978.4,12009.4,12139.1,12230.2,12175.4,12305.9,12363.2,12177.8,12154.7,11929.0,12250.0,12203.0,12246.7,12163.7,12215.1,12359.1,12181.1,12064.3,12074.9,12099.3,12120.5,12161.1,12061.5,12166.9,12325.9,12219.4,12234.9,12393.1,12230.7,12273.1,11617.8,11443.7,11538.3,11747.7,11735.7,11551.0,11669.1,11150.8,10939.2,10957.7,11041.7,11097.8,10911.7,11274.8,12264.2,12256.6,12256.8,12315.0,12376.3,12088.2,12229.2,12231.4,12381.4,12294.0,12210.6,12419.1,12337.2,12194.3,11955.1,12183.5,12179.9,12195.6,12035.8,12293.9,12292.8,11861.9,11916.1,12173.8,12167.5,12135.1,12170.8,12370.5,12088.0,11976.0,11966.4,12146.9,12225.1,11984.5,12217.9,11606.7,11395.1,11617.6,11442.8,11353.8,11435.7,11668.7,11002.4,10886.1,11037.2,10837.2,10809.6,10846.9,11102.2,12230.6,11984.9,12330.7,12128.3,11936.4,12187.7,12278.2,12119.5,12044.6,11977.0,12134.3,11935.0,12045.2,12162.3,12102.3,11930.4,11932.0,11925.6,11742.4,11951.7,11971.5,12132.4,12202.6,12163.7,12071.6,12031.4,11887.0,12175.9,12251.7,12184.6,12314.8,12270.1,12297.9,12054.8,12119.7,11650.2,11590.7,11579.7,11457.0,11416.4,11550.2,11464.9,11093.1,10865.1,10895.1,10804.4,10667.9,10845.5,11110.0,12334.3,12187.3,12227.1,12221.6,12288.7,12148.4,12109.9,12444.4,12316.2,12288.5,12267.8,12267.1,12062.0,12034.0,12239.9,12066.9,11991.7,12057.5,12146.7,12029.3,12102.6,12292.3,12088.3,12111.8,12007.9,12134.4,11950.9,12135.2,12415.5,12513.0,12159.8,12121.3,12288.5,12129.1,12123.0,11537.6,11472.1,11605.1,11466.2,11455.8,11362.9,11533.9,10968.3,10849.0,10700.8,10808.9,10708.5,10746.4,10785.1,12337.4,12134.6,12156.9,12024.6,12135.1,11956.5,12145.5,12280.5,12211.1,12015.0,11961.9,12034.8,12240.8,12037.9,11990.0,11979.3,11908.5,11793.7,11869.5,11931.2,12176.0,12150.4,11865.5,11969.9,11843.5,11807.9,11910.3,12208.5,12137.6,12171.9,12090.9,12099.2,11983.3,11889.0,12090.8,11666.0,11322.8,11495.4,11338.5,11355.1,11110.8,11468.9,11025.0,11075.7,10920.5,10995.9,10858.2,10614.9,10843.4,12163.4,12070.4,12172.1,11950.5,11960.8,11840.2,12111.0,12210.7,12039.6,12039.8,11933.6,11947.3,11963.7,11811.7,12219.3,11952.0,11856.3,11657.8,11755.8,11829.5,11615.9,12608.5,12008.3,11876.7,11746.5,11707.7,11855.0,11638.0,12600.1,12362.5,11994.9,11852.6,11953.7,11903.7,11659.1,11770.4,11533.5,11424.0,11153.5,11134.8,11331.5,11093.6,11150.9,10892.9,10819.3,10877.6,10642.6,10663.5,10755.0,12335.7,12340.4,12322.4,12294.2,12223.6,11825.6,11680.2,12351.6,12252.8,12369.4,12281.5,12273.1,12068.1,11602.0,12334.9,12008.0,12172.2,12154.6,12117.1,11987.0,11871.8,12429.8,12069.0,12175.2,12035.6,12112.9,12016.0,11969.5,12378.7,12673.1,12384.8,12243.9,12205.0,12108.0,12020.4,11591.7,11710.0,11816.9,11467.1,11426.9,11552.3,11544.5,11152.9,10984.2,11235.5,11342.2,11081.0,10952.7,10894.6,12503.3,12664.1,12651.6,12570.1,12729.0,12173.7,12023.1,12052.9,12486.9,12510.9,12436.3,12656.1,12449.8,11953.9,11943.6,12392.6,12393.6,12313.1,12418.8,12438.3,12390.5,11981.5,12339.5,12481.6,12232.3,12303.3,12445.2,12414.7,12158.5,12102.1,12443.6,12266.7,12457.9,12461.7,12428.5,11519.6,11438.4,11632.6,11476.1,11678.2,11673.8,11755.9,11116.4,11052.1,11237.4,11278.7,11142.9,11369.4,11066.3,12356.5,12172.5,12190.0,12138.6,12116.5,12477.3,12497.9,12333.4,12288.1,12106.3,12074.4,12080.5,12162.1,12348.9,12192.4,12059.5,11871.9,11789.1,11719.7,12008.5,11807.4,12330.5,12200.0,12102.2,12010.8,11772.1,11979.0,11905.4,11335.2,11419.8,10996.5,11367.7,11287.8,11156.2,11069.2,11163.3,10965.9,11067.7,11024.5,11066.4,10903.2,11056.7,11263.7,11191.3,11241.0,11170.9,11048.4,10961.6,11274.1,12338.1,12206.2,12513.5,12300.7,12272.8,12019.8,12051.4,12149.5,12268.1,12137.5,12313.2,12310.9,12214.3,12069.6,12153.2,11984.9,12179.3,11914.2,12195.6,12249.7,12099.4,11998.3,12051.4,12098.1,12009.5,12132.1,12310.1,12049.4,12191.3,12122.8,12187.0,12086.4,12016.1,11939.1,12079.4,11728.7,11372.2,11264.8,11549.9,11530.3,11503.6,11495.4,11115.9,10971.5,10861.0,11073.0,11113.6,11087.4,10989.6,12173.1,12053.8,12108.8,12214.4,12141.8,12008.5,12030.0,12189.1,12143.5,11987.9,12009.9,12050.1,12011.9,12043.5,12158.8,12089.3,11909.4,11879.7,11886.0,11977.4,11901.6,12006.0,11957.3,11906.7,11979.4,12015.5,11929.3,11962.3,12044.7,12103.6,11967.4,11925.1,11994.0,11934.8,11842.1,11305.2,11388.5,11439.3,11429.2,11525.2,11497.4,11509.1,11068.6,10844.1,10908.0,10953.2,10985.3,11025.4,11094.1,11943.3,12036.1,12090.8,12002.1,12020.4,12114.9,12093.9,12406.3,12209.6,11954.2,12022.2,11998.8,12164.5,11983.3,12041.3,12044.2,11886.1,11777.4,11773.8,11999.4,11979.0,12117.0,11950.0,12040.6,12014.2,11669.5,11947.9,12014.3,12020.0,12139.8,12122.7,12160.9,11965.8,11877.5,11845.7,11501.9,11307.9,11416.0,11480.4,11399.5,11411.5,11344.7,11050.1,10988.0,11032.9,10989.1,10805.9,10759.6,11216.4,12217.5,12102.3,12068.3,12100.6,12185.1,12033.3,12071.7,12386.1,12317.9,12176.6,12086.4,12151.5,12158.4,11990.5,12035.2,12081.7,11810.2,11934.7,12047.9,11862.2,11882.0,11908.4,11922.9,11792.2,11972.3,11917.6,11886.6,11924.6,11278.4,11411.9,11046.7,11224.7,11109.0,11028.6,11091.1,11391.0,11257.3,11304.3,11264.4,11394.6,11267.4,11378.8,10978.1,10771.5,10694.5,10985.7,10785.1,10848.4,10947.6,12092.9,12028.0,12163.5,12169.5,12083.7,11958.8,12181.8,12162.4,11986.9,12049.4,12058.1,12108.1,12087.9,12143.9,12064.7,12022.9,11681.8,11799.3,12075.4,11791.9,11988.1,12296.5,11970.0,11946.4,11855.8,11964.2,11900.1,11882.0,12157.7,12246.1,12060.2,12045.7,11998.0,11811.0,12108.2,11605.0,11552.2,11490.8,11464.9,11581.6,11190.5,11419.6,11161.7,11139.5,11092.5,11399.0,11214.1,10897.9,11091.7,12259.7,12330.5,12168.1,12332.7,12312.8,12092.7,12002.1,12345.8,12397.5,12214.5,12212.0,12240.6,12322.6,12064.3,12489.1,12230.7,12055.4,12095.0,12047.6,12144.1,12102.8,12337.2,12221.6,12132.5,12131.8,12043.3,12209.5,12175.7,12233.8,12474.0,12228.2,12179.5,12142.6,11944.2,11940.3,11934.4,11679.1,11739.1,11611.0,11610.8,11639.6,11507.2,11334.6,11322.0,11379.9,11328.7,11190.5,11242.3,11294.6,12315.0,12522.8,12462.5,12520.6,12435.2,12456.5,12477.6,12478.7,12538.8,12357.2,12498.5,12381.7,12459.2,12262.2,12252.7,12386.4,12245.8,12298.4,12356.6,12385.3,12294.0,11608.3,11341.7,11409.9,11576.4,11705.7,11533.0,11657.6,12513.9,12497.7,12394.4,12469.8,12388.7,12191.7,12412.5,12076.9,11752.3,11651.9,11800.9,11803.1,11838.1,11859.4,11567.5,11207.8,11330.0,11262.2,11236.7,11257.5,11432.0,12420.2,12453.1,12385.5,12559.1,12714.2,12539.7,12591.4,12507.3,12539.6,12344.6,12574.9,12569.7,12546.2,12443.1,12375.1,12482.4,12329.3,12394.6,12576.7,12359.9,12389.5,12688.6,12439.1,12474.1,12444.4,12180.1,12343.5,12472.2,12584.2,12748.2,12520.0,12549.7,12313.9,12312.0,12611.2,11891.3,11939.2,12034.2,11838.0,11752.9,11771.3,11862.7,11469.5,11500.9,11429.6,11610.3,11291.9,11283.6,11447.1,12430.9,12544.6,12480.5,12290.7,12449.6,12339.6,12503.0,12636.8,12433.1,12448.9,12250.5,12395.8,12456.5,12415.8,12638.9,12463.6,12377.1,12162.4,12344.1,12319.0,12502.8,12888.2,12533.2,12486.4,12204.1,12324.9,12202.4,12550.0,12734.0,12603.1,12653.3,12502.1,12467.0,12322.8,12387.0,12468.7,12028.9,12018.5,12046.8,12110.2,11745.6,12032.6,11852.2,11685.9,11569.4,11783.4,11474.6,11180.8,11791.7,12708.6,12704.6,12857.4,12763.6,12903.7,12462.1,12584.2,12671.8,12766.4,12648.1,12622.2,12802.7,12784.5,12543.2,13089.7,12733.5,12647.8,12584.8,12734.0,12710.9,12672.2,13145.5,12815.6,12669.2,12620.5,12490.5,12688.1,12707.6,13067.7,13124.5,12686.7,12660.0,12723.3,12548.3,12831.1,12456.1,12385.9,12241.0,12110.9,12178.4,12217.7,12088.6,12029.6,11849.4,11830.6,11927.7,11759.5,11626.9,11747.6,13002.1,13029.6,13036.3,13022.6,13031.8,12664.8,12823.6,13276.2,12999.8,13216.1,13007.1,12946.3,12809.2,12727.0,12879.6,12974.8,13021.4,12956.3,12860.1,12885.8,12919.9,12876.0,12909.0,12994.9,12914.6,12750.4,12817.1,12831.0,12859.5,13004.4,12953.0,12939.6,12948.3,12689.9,12781.2,12266.7,12354.8,12199.7,12107.8,12200.9,12180.0,12340.2,11899.8,11766.4,11663.7,11861.5,11452.9,11435.4,11576.4,13347.7,13087.8,12979.5,13155.1,12999.4,12902.6,12840.0,13059.9,12816.0,12865.5,13083.2,12963.9,12923.7,12692.5,13211.6,12914.8,12882.7,13006.6,12875.7,13047.7,13079.6,13422.8,12897.8,12856.3,12985.5,12817.2,12964.7,13046.4,13316.6,13285.4,12680.2,13018.5,12848.2,12932.9,13086.3,12593.0,12618.4,12558.7,12452.6,12302.7,12090.8,12544.6,12303.3,12259.4,12150.9,12139.2,12012.4,11748.9,12192.8,12622.7,12628.8,12754.9,12877.8,12706.3,12385.8,12477.7,13011.3,13101.6,13326.3,13168.9,13357.0,13207.7,12951.1,12968.0,12957.2,12975.8,12793.7,13050.4,13054.8,13019.1,13319.4,13066.4,12948.2,12959.3,13054.0,13090.0,12951.9,13264.4,13168.6,12982.2,12965.6,13295.5,13161.8,13208.6,12496.2,12521.9,12455.2,12433.3,12489.0,12432.9,12649.3,12406.0,12096.9,12082.8,12025.7,12214.3,12003.8,12298.1,13199.4,13176.4,13149.8,13134.4,12993.2,12874.6,13094.9,13259.4,13040.1,13243.7,13237.0,13219.4,13209.4,12895.1,13318.6,13251.1,13387.8,13167.3,13135.5,13321.9,13106.5,13105.6,13138.8,13076.3,12899.2,13038.1,13272.2,13078.3,13334.1,13088.9,13272.1,12898.4,13017.5,13217.9,13270.0,12837.0,12610.8,12721.0,12436.6,12489.2,12610.9,12682.8,12480.0,12243.4,12145.6,12195.5,12065.4,11957.7,12239.9,13221.8,13260.8,13227.1,13272.9,13273.0,13290.2,13259.8,13101.0,13305.4,13321.9,13229.0,13337.3,13286.1,13271.1,13321.3,13199.0,13227.1,12976.7,13180.4,13042.9,13259.5,12406.7,12373.6,12474.9,12404.2,12590.9,12506.8,12481.4,13055.5,13383.6,12969.2,13052.5,13236.0,13024.3,13204.9,12339.6,12809.3,12847.5,12483.8,12670.7,12689.7,12670.8,11827.7,12160.2,12427.3,12387.8,12286.8,12046.1,12514.6,12493.0,12705.8,13084.3,13305.8,13271.4,13210.3,13283.1,12738.7,12894.5,12912.5,13279.3,13205.4,13128.7,13152.8,12787.6,12534.5,12845.7,12933.8,13372.9,13175.5,13230.3,12932.5,12678.8,12700.0,12957.2,12792.7,13104.8,13197.4,12851.3,13085.6,12867.1,12864.9,12830.0,12710.5,13266.8,12007.1,12154.2,11892.9,12025.0,11809.4,11805.9,12185.8,11734.6,11578.9,11602.9,11506.5,11496.7,11658.0,11915.4,13055.8,13179.7,13061.8,12876.7,12785.5,12639.9,12855.0,13333.5,13302.5,13301.6,12982.5,12857.2,12861.8,12922.5,13163.0,13149.9,13133.7,12905.4,12920.6,12853.8,12954.1,13187.5,13218.4,12910.3,12856.9,12941.2,12852.6,12743.8,13203.7,13197.0,13033.4,12898.9,12787.6,13006.7,12731.5],"Prophet":[11054.4,10989.9,10989.9,10989.9,10989.9,10989.9,10989.9,11638.2,11638.2,11564.2,11564.2,11564.2,11564.2,11564.2,11063.6,11063.6,11063.6,10990.6,10990.6,10990.6,10990.6,10931.4,10931.4,10931.4,10931.4,10861.7,10861.7,10861.7,11696.4,11696.4,11696.4,11696.4,11696.4,11626.0,11626.0,11663.2,11663.2,11663.2,11663.2,11663.2,11663.2,11595.6,11543.9,11543.9,11543.9,11543.9,11543.9,11543.9,11543.9,11603.6,11578.5,11578.5,11578.5,11578.5,11578.5,11578.5,11633.2,11633.2,11605.7,11605.7,11605.7,11605.7,11605.7,11070.8,11070.8,11070.8,11043.2,11043.2,11043.2,11043.2,10949.7,10949.7,10949.7,10949.7,10924.1,10924.1,10924.1,11729.0,11729.0,11729.0,11729.0,11729.0,11702.8,11702.8,11710.0,11710.0,11710.0,11710.0,11710.0,11710.0,11683.7,11604.0,11604.0,11604.0,11604.0,11604.0,11604.0,11604.0,11699.4,11648.9,11648.9,11648.9,11648.9,11648.9,11648.9,11741.4,11741.4,11691.1,11691.1,11691.1,11691.1,11691.1,11189.1,11189.1,11189.1,11140.3,11140.3,11140.3,11140.3,11075.8,11075.8,11075.8,11075.8,11029.6,11029.6,11029.6,11863.0,11863.0,11863.0,11863.0,11863.0,11818.2,11818.2,11849.1,11849.1,11849.1,11849.1,11849.1,11849.1,11806.8,11747.3,11747.3,11747.3,11747.3,11747.3,11747.3,11747.3,11845.0,11795.9,11795.9,11795.9,11795.9,11795.9,11795.9,11888.2,11888.2,11839.3,11839.3,11839.3,11839.3,11839.3,11335.4,11335.4,11335.4,11286.9,11286.9,11286.9,11286.9,11217.6,11217.6,11217.6,11217.6,11171.7,11171.7,11171.7,12003.4,12003.4,12003.4,12003.4,12003.4,11955.4,11955.4,11983.3,11983.3,11983.3,11983.3,11983.3,11983.3,11936.5,11873.3,11873.3,11873.3,11873.3,11873.3,11873.3,11873.3,11971.1,11912.5,11912.5,11912.5,11912.5,11912.5,11912.5,12004.4,12004.4,11946.3,11946.3,11946.3,11946.3,11946.3,11438.7,11438.7,11438.7,11383.5,11383.5,11383.5,11383.5,11308.4,11308.4,11308.4,11308.4,11255.5,11255.5,11255.5,12084.3,12084.3,12084.3,12084.3,12084.3,12030.9,12030.9,12053.0,12053.0,12053.0,12053.0,12053.0,12053.0,12000.5,11931.5,11931.5,11931.5,11931.5,11931.5,11931.5,11931.5,12011.9,11958.0,11958.0,11958.0,11958.0,11958.0,11958.0,12033.1,12033.1,11981.7,11981.7,11981.7,11981.7,11981.7,11457.8,11457.8,11457.8,11407.7,11407.7,11407.7,11407.7,11317.7,11317.7,11317.7,11317.7,11270.7,11270.7,11270.7,12089.4,12089.4,12089.4,12089.4,12089.4,12041.4,12041.4,12052.6,12052.6,12052.6,12052.6,12052.6,12052.6,12006.6,11927.7,11927.7,11927.7,11927.7,11927.7,11927.7,11927.7,11987.3,11954.9,11954.9,11954.9,11954.9,11954.9,11954.9,12009.6,12009.6,11977.2,11977.2,11977.2,11977.2,11977.2,11436.9,11436.9,11436.9,11404.9,11404.9,11404.9,11404.9,11299.4,11299.4,11299.4,11299.4,11269.4,11269.4,11269.4,12077.8,12077.8,12077.8,12077.8,12077.8,12047.2,12047.2,12046.9,12046.9,12046.9,12046.9,12046.9,12046.9,12018.0,11929.5,11929.5,11929.5,11929.5,11929.5,11929.5,11929.5,11980.1,11965.8,11965.8,11965.8,11965.8,11965.8,11965.8,12012.4,12012.4,11997.5,11997.5,11997.5,11997.5,11997.5,11448.9,11448.9,11448.9,11434.7,11434.7,11434.7,11434.7,11319.3,11319.3,11319.3,11319.3,11307.0,11307.0,11307.0,12108.9,12108.9,12108.9,12108.9,12108.9,12094.9,12094.9,12087.4,12087.4,12087.4,12087.4,12087.4,12087.4,12073.0,11977.6,11977.6,11977.6,11977.6,11977.6,11977.6,11977.6,12067.1,12020.9,12020.9,12020.9,12020.9,12020.9,12020.9,12105.1,12105.1,12058.7,12058.7,12058.7,12058.7,12058.7,11544.5,11544.5,11544.5,11499.2,11499.2,11499.2,11499.2,11415.6,11415.6,11415.6,11415.6,11372.0,11372.0,11372.0,12207.3,12207.3,12207.3,12207.3,12207.3,12162.2,12162.2,12183.4,12183.4,12183.4,12183.4,12183.4,12183.4,12139.4,12068.9,12068.9,12068.9,12068.9,12068.9,12068.9,12068.9,12134.9,12104.9,12104.9,12104.9,12104.9,12104.9,12104.9,12164.7,12164.7,12135.1,12135.1,12135.1,12135.1,12135.1,11594.5,11594.5,11594.5,11565.1,11565.1,11565.1,11565.1,11453.1,11453.1,11453.1,11453.1,11425.5,11425.5,11425.5,12233.4,12233.4,12233.4,12233.4,12233.4,12205.1,12205.1,12194.9,12194.9,12194.9,12194.9,12194.9,12194.9,12168.2,12066.1,12066.1,12066.1,12066.1,12066.1,12066.1,12066.1,12113.1,12087.6,12087.6,12087.6,12087.6,12087.6,12087.6,12128.4,12128.4,12102.4,12102.4,12102.4,12102.4,12102.4,11542.7,11542.7,11542.7,11517.3,11517.3,11517.3,11517.3,11384.9,11384.9,11384.9,11384.9,11361.4,11361.4,11361.4,12152.9,12152.9,12152.9,12152.9,12152.9,12127.8,12127.8,12101.3,12101.3,12101.3,12101.3,12101.3,12101.3,12076.3,11961.1,11961.1,11961.1,11961.1,11961.1,11961.1,11961.1,12022.6,11969.9,11969.9,11969.9,11969.9,11969.9,11969.9,12027.2,12027.2,11975.4,11975.4,11975.4,11975.4,11975.4,11431.4,11431.4,11431.4,11381.8,11381.8,11381.8,11381.8,11265.1,11265.1,11265.1,11265.1,11217.8,11217.8,11217.8,12028.9,12028.9,12028.9,12028.9,12028.9,11981.4,11981.4,11973.4,11973.4,11973.4,11973.4,11973.4,11973.4,11927.1,11831.3,11831.3,11831.3,11831.3,11831.3,11831.3,11831.3,11884.0,11840.2,11840.2,11840.2,11840.2,11840.2,11840.2,11889.6,11889.6,11846.8,11846.8,11846.8,11846.8,11846.8,11297.5,11297.5,11297.5,11254.9,11254.9,11254.9,11254.9,11135.8,11135.8,11135.8,11135.8,11094.0,11094.0,11094.0,11905.1,11905.1,11905.1,11905.1,11905.1,11864.9,11864.9,11857.1,11857.1,11857.1,11857.1,11857.1,11857.1,11817.9,11723.5,11723.5,11723.5,11723.5,11723.5,11723.5,11723.5,11791.7,11743.1,11743.1,11743.1,11743.1,11743.1,11743.1,11232.2,11232.2,11185.8,11185.8,11185.8,11185.8,11185.8,10651.5,10651.5,10651.5,10605.3,10605.3,10605.3,10605.3,11074.7,11074.7,11074.7,11074.7,11029.4,11029.4,11029.4,11857.1,11857.1,11857.1,11857.1,11857.1,11811.2,11811.2,11820.7,11820.7,11820.7,11820.7,11820.7,11820.7,11775.8,11698.2,11698.2,11698.2,11698.2,11698.2,11698.2,11698.2,11762.3,11728.7,11728.7,11728.7,11728.7,11728.7,11728.7,11788.1,11788.1,11755.2,11755.2,11755.2,11755.2,11755.2,11219.5,11219.5,11219.5,11185.3,11185.3,11185.3,11185.3,11076.5,11076.5,11076.5,11076.5,11044.4,11044.4,11044.4,11868.6,11868.6,11868.6,11868.6,11868.6,11837.0,11837.0,11842.0,11842.0,11842.0,11842.0,11842.0,11842.0,11810.3,11727.8,11727.8,11727.8,11727.8,11727.8,11727.8,11727.8,11800.8,11766.0,11766.0,11766.0,11766.0,11766.0,11766.0,11834.0,11834.0,11799.6,11799.6,11799.6,11799.6,11799.6,11271.3,11271.3,11271.3,11238.5,11238.5,11238.5,11238.5,11134.1,11134.1,11134.1,11134.1,11102.5,11102.5,11102.5,11932.7,11932.7,11932.7,11932.7,11932.7,11901.4,11901.4,11912.6,11912.6,11912.6,11912.6,11912.6,11912.6,11881.4,11802.3,11802.3,11802.3,11802.3,11802.3,11802.3,11802.3,11868.3,11847.1,11847.1,11847.1,11847.1,11847.1,11847.1,11906.6,11906.6,11885.9,11885.9,11885.9,11885.9,11885.9,11349.8,11349.8,11349.8,11328.7,11328.7,11328.7,11328.7,11216.7,11216.7,11216.7,11216.7,11197.0,11197.0,11197.0,12022.4,12022.4,12022.4,12022.4,12022.4,12001.3,12001.3,12007.4,12007.4,12007.4,12007.4,12007.4,12007.4,11986.9,11902.1,11902.1,11902.1,11902.1,11902.1,11902.1,11902.1,11983.1,11952.0,11952.0,11952.0,11952.0,11952.0,11952.0,11456.0,11456.0,11424.7,11424.7,11424.7,11424.7,11424.7,11474.9,11474.9,11474.9,11443.9,11443.9,11443.9,11443.9,11345.2,11345.2,11345.2,11345.2,11315.8,11315.8,11315.8,12156.9,12156.9,12156.9,12156.9,12156.9,12126.4,12126.4,12145.5,12145.5,12145.5,12145.5,12145.5,12145.5,12116.0,12043.2,12043.2,12043.2,12043.2,12043.2,12043.2,12043.2,12117.9,12096.0,12096.0,12096.0,12096.0,12096.0,12096.0,12163.1,12163.1,12142.7,12142.7,12142.7,12142.7,12142.7,11614.1,11614.1,11614.1,11593.1,11593.1,11593.1,11593.1,11486.3,11486.3,11486.3,11486.3,11465.3,11465.3,11465.3,12299.5,12299.5,12299.5,12299.5,12299.5,12278.3,12278.3,12288.3,12288.3,12288.3,12288.3,12288.3,12288.3,12267.8,12186.4,12186.4,12186.4,12186.4,12186.4,12186.4,12186.4,12266.4,12238.5,12238.5,12238.5,12238.5,12238.5,12238.5,12310.0,12310.0,12282.3,12282.3,12282.3,12282.3,12282.3,11758.3,11758.3,11758.3,11731.4,11731.4,11731.4,11731.4,11626.6,11626.6,11626.6,11626.6,11601.0,11601.0,11601.0,12437.9,12437.9,12437.9,12437.9,12437.9,12411.3,12411.3,12423.4,12423.4,12423.4,12423.4,12423.4,12423.4,12396.7,12316.7,12316.7,12316.7,12316.7,12316.7,12316.7,12316.7,11805.4,11790.1,11790.1,11790.1,11790.1,11790.1,11790.1,12419.8,12419.8,12404.0,12404.0,12404.0,12404.0,12404.0,11862.7,11862.7,11862.7,11847.7,11847.7,11847.7,11847.7,11725.1,11725.1,11725.1,11725.1,11711.5,11711.5,11711.5,12533.1,12533.1,12533.1,12533.1,12533.1,12518.4,12518.4,12514.7,12514.7,12514.7,12514.7,12514.7,12514.7,12499.8,12405.0,12405.0,12405.0,12405.0,12405.0,12405.0,12405.0,12508.6,12448.0,12448.0,12448.0,12448.0,12448.0,12448.0,12543.9,12543.9,12484.0,12484.0,12484.0,12484.0,12484.0,11983.7,11983.7,11983.7,11924.2,11924.2,11924.2,11924.2,11841.4,11841.4,11841.4,11841.4,11784.5,11784.5,11784.5,12645.6,12645.6,12645.6,12645.6,12645.6,12591.0,12591.0,12623.9,12623.9,12623.9,12623.9,12623.9,12623.9,12571.9,12513.0,12513.0,12513.0,12513.0,12513.0,12513.0,12513.0,12586.5,12554.7,12554.7,12554.7,12554.7,12554.7,12554.7,12621.5,12621.5,12590.0,12590.0,12590.0,12590.0,12590.0,12061.4,12061.4,12061.4,12030.6,12030.6,12030.6,12030.6,11920.3,11920.3,11920.3,11920.3,11889.7,11889.7,11889.7,12727.2,12727.2,12727.2,12727.2,12727.2,12696.1,12696.1,12706.9,12706.9,12706.9,12706.9,12706.9,12706.9,12677.0,12598.7,12598.7,12598.7,12598.7,12598.7,12598.7,12598.7,12698.8,12642.0,12642.0,12642.0,12642.0,12642.0,12642.0,12736.9,12736.9,12679.7,12679.7,12679.7,12679.7,12679.7,12177.5,12177.5,12177.5,12122.4,12122.4,12122.4,12122.4,12037.6,12037.6,12037.6,12037.6,11984.1,11984.1,11984.1,12846.6,12846.6,12846.6,12846.6,12846.6,12793.6,12793.6,12828.8,12828.8,12828.8,12828.8,12828.8,12828.8,12775.7,12722.6,12722.6,12722.6,12722.6,12722.6,12722.6,12722.6,12812.0,12763.0,12763.0,12763.0,12763.0,12763.0,12763.0,12849.8,12849.8,12800.7,12800.7,12800.7,12800.7,12800.7,12288.2,12288.2,12288.2,12240.5,12240.5,12240.5,12240.5,11572.5,11572.5,11572.5,11572.5,11526.2,11526.2,11526.2,12951.8,12951.8,12951.8,12951.8,12951.8,12906.3,12906.3,12928.8,12928.8,12928.8,12928.8,12928.8,12928.8,12885.9,12818.7,12818.7,12818.7,12818.7,12818.7,12818.7,12818.7,12913.6,12853.4,12853.4,12853.4,12853.4,12853.4,12853.4,12945.9,12945.9,12885.8,12885.8,12885.8,12885.8,12885.8,12377.1,12377.1,12377.1,12318.4,12318.4,12318.4,12318.4,12228.0,12228.0,12228.0,12228.0,12169.3,12169.3,12169.3,12458.4,12458.4,12458.4,12458.4,12458.4,12396.6,12396.6,12994.2,12994.2,12994.2,12994.2,12994.2,12994.2,12939.7,12875.3,12875.3,12875.3,12875.3,12875.3,12875.3,12875.3,12920.9,12900.3,12900.3,12900.3,12900.3,12900.3,12900.3,12944.6,12944.6,12924.6,12924.6,12924.6,12924.6,12924.6,12367.9,12367.9,12367.9,12348.1,12348.1,12348.1,12348.1,12210.3,12210.3,12210.3,12210.3,12191.8,12191.8,12191.8,13000.0,13000.0,13000.0,13000.0,13000.0,12981.8,12981.8,12964.3,12964.3,12964.3,12964.3,12964.3,12964.3,12945.1,12839.1,12839.1,12839.1,12839.1,12839.1,12839.1,12839.1,12903.2,12857.2,12857.2,12857.2,12857.2,12857.2,12857.2,12920.6,12920.6,12876.1,12876.1,12876.1,12876.1,12876.1,12340.5,12340.5,12340.5,12295.3,12295.3,12295.3,12295.3,12177.2,12177.2,12177.2,12177.2,12134.5,12134.5,12134.5,12965.0,12965.0,12965.0,12965.0,12965.0,12921.9,12921.9,12925.5,12925.5,12925.5,12925.5,12925.5,12925.5,12884.8,12797.7,12797.7,12797.7,12797.7,12797.7,12797.7,12797.7,12301.1,12243.7,12243.7,12243.7,12243.7,12243.7,12243.7,12890.7,12890.7,12832.2,12832.2,12832.2,12832.2,12832.2,12310.2,12310.2,12310.2,12253.2,12253.2,12253.2,12253.2,12146.4,12146.4,12146.4,12146.4,12092.1,12092.1,12092.1,12936.0,12936.0,12936.0,12936.0,12936.0,12882.9,12882.9,12899.9,12899.9,12899.9,12899.9,12899.9,12899.9,12847.2,12774.0,12774.0,12774.0,12774.0,12774.0,12774.0,12774.0,12750.0,12794.5,12794.5,12794.5,12794.5,12794.5,12794.5,12773.5,12773.5,12816.1,12816.1,12816.1,12816.1,12816.1,12199.1,12199.1,12199.1,12241.2,12241.2,12241.2,12241.2,12044.2,12044.2,12044.2,12044.2,12083.8,12083.8,12083.8,12844.0,12844.0,12844.0,12844.0,12844.0,12880.3,12880.3,12821.0,12821.0,12821.0,12821.0,12821.0,12821.0,12851.7,12705.6,12705.6,12705.6,12705.6,12705.6,12705.6,12705.6,12774.1,12733.6,12733.6,12733.6,12733.6,12733.6,12733.6,12806.1,12806.1,12766.2,12766.2,12766.2,12766.2,12766.2],"LSTM":[12236.6,11965.3,11639.3,11422.7,11571.1,11630.7,11194.0,11533.3,11921.4,11623.4,11467.7,11747.6,11742.2,11630.3,11194.8,10734.7,11104.4,11426.2,11368.9,11344.0,11265.5,11208.7,10861.5,10747.4,11105.0,11453.7,11266.5,10769.1,11489.9,11673.4,11633.4,11540.6,11699.8,11514.9,11636.8,11840.1,11627.5,11615.8,11561.1,11715.0,11792.8,11852.0,11892.2,11586.9,11343.5,11371.8,11444.3,11371.7,11773.8,11959.5,11727.1,11561.0,11532.0,11603.2,11636.9,11339.2,11833.3,11694.1,11718.1,11603.4,11547.6,11578.2,11416.6,11384.4,10867.9,10980.7,10984.1,10908.5,10927.8,10915.4,11247.0,10997.2,10880.5,11024.0,10874.0,10774.2,10597.0,11552.3,11765.1,11805.0,11700.1,11624.0,11477.5,11534.3,11987.9,11766.6,11729.7,11591.6,11720.5,11701.0,11806.0,11853.8,11704.2,11347.1,11313.1,11448.4,11561.7,11584.0,11813.0,11644.1,11482.6,11433.6,11628.6,11847.4,11719.8,11746.3,11549.0,11582.5,11623.9,11724.9,11844.2,11744.9,11848.1,11519.4,11095.6,11184.2,11216.2,11300.6,11186.6,11654.9,11554.3,11467.4,11152.7,11124.6,11003.7,10772.4,11242.1,11390.8,11493.1,11505.0,11611.4,11469.1,11531.4,12024.0,11356.8,11359.1,11488.4,11550.7,11678.5,11713.6,12195.6,11717.9,11335.8,11485.4,11492.5,11581.1,11567.3,12230.0,11866.2,11542.3,11493.0,11605.6,11582.9,11468.2,12064.6,11708.4,11697.1,11624.3,11714.2,11595.2,11611.0,11728.9,11097.6,11216.6,11334.6,11242.6,11448.9,11426.9,11305.9,11338.6,11269.5,11389.8,11207.3,11156.6,10845.8,11757.7,11762.9,11864.5,11791.3,11774.7,11515.8,11630.5,12165.7,11884.5,11725.5,11596.1,11832.7,11793.5,11990.4,12304.5,11762.5,11371.0,11491.1,11660.6,11786.9,11775.5,12497.2,12051.6,11695.2,11704.3,11920.5,11994.2,11833.0,12451.8,12206.9,11929.4,11865.7,11882.8,11834.1,11777.8,11617.4,11404.2,11283.6,11244.0,11122.4,11101.1,10988.5,11199.1,10652.6,10927.3,11168.2,11100.1,10868.5,10712.6,11726.7,11802.6,11718.4,11696.9,11802.6,11568.8,11855.9,12258.0,11929.2,12022.5,11960.9,12053.1,11878.4,12117.2,12175.6,11824.4,11487.7,11485.2,11761.2,11868.6,11898.0,12168.9,11945.1,11667.3,11729.5,11817.1,11923.8,11920.7,11946.7,11937.2,11947.0,11866.8,11938.5,12022.8,11870.5,11324.0,10970.7,11073.8,11167.5,11204.1,11195.8,11202.0,11292.7,10974.4,10925.9,11092.3,11093.3,10907.1,10729.9,11688.7,11935.8,11978.1,11806.8,11800.4,11607.5,11837.8,12092.5,11918.3,11939.3,11788.1,11890.5,11820.2,12049.3,12034.7,11861.3,11579.2,11436.9,11608.3,11710.2,11697.8,12010.7,11938.5,11686.2,11601.6,11767.7,11959.4,11746.3,11833.7,11756.8,11730.5,11739.8,11841.7,12016.4,11749.5,11282.8,10856.6,11049.6,11207.9,11245.2,11340.3,11159.4,11192.9,11123.9,11030.1,11165.3,11216.1,11157.7,10807.2,11653.2,11898.3,12007.9,11881.7,11810.0,11650.4,11749.0,12013.4,11854.1,11804.2,11701.9,11847.5,11769.4,11850.3,11992.9,11770.0,11504.5,11484.2,11621.8,11670.9,11614.6,12014.7,11890.2,11584.0,11721.0,11838.9,11967.6,11712.0,11939.6,11885.4,11881.0,11853.3,11898.1,11861.0,11678.5,11342.5,11022.6,11049.8,11133.3,11134.2,11048.7,10940.5,11037.5,10788.4,10756.3,10958.8,10924.1,10767.4,10582.4,11725.0,11846.5,11818.1,11725.8,11663.5,11512.1,11642.9,12108.4,11913.4,11907.7,11860.5,11908.7,11791.5,11910.8,12224.6,11817.7,11529.1,11491.8,11599.1,11625.6,11663.1,12323.5,12074.2,11727.5,11665.5,11784.7,11854.1,11686.2,12110.3,12048.9,11859.9,11791.6,11839.2,11942.7,11765.6,11314.9,11139.9,11191.7,11182.4,11127.3,11149.9,11020.0,11104.0,10778.7,10876.3,11118.6,11122.7,11009.4,10720.9,11688.4,11760.8,11771.4,11708.6,11779.5,11614.7,11839.6,12137.7,11921.4,12029.0,11978.5,11999.1,11859.5,12008.9,12095.9,11791.6,11678.2,11580.7,11665.8,11727.7,11846.5,12137.1,11955.6,11804.6,11714.7,11709.0,11862.0,11841.9,11832.9,11828.5,11845.0,11777.3,11733.0,11966.4,11857.8,11186.2,10863.0,11051.0,11182.4,11096.7,11213.0,11238.9,11116.6,11084.3,11033.2,11158.3,11108.8,10994.7,10888.6,11649.4,11806.4,11949.3,11846.8,11823.2,11621.7,11814.1,12089.6,11908.0,11894.9,11790.0,11858.7,11808.6,11988.0,12108.2,11751.8,11585.8,11571.1,11603.2,11663.4,11743.1,12354.9,11979.2,11705.3,11755.4,11754.9,11969.0,11830.4,12262.6,12284.2,11866.9,11816.8,11783.7,11842.2,11754.6,11592.5,11395.0,11234.9,11167.9,11046.6,11029.9,11086.8,11069.5,10859.5,10811.7,11169.2,11015.8,10770.3,10711.5,11715.0,11939.0,11853.8,11825.0,11769.7,11514.4,11750.9,12202.9,12059.1,12056.9,12022.6,11959.2,11804.7,12014.6,12223.1,11940.3,11651.3,11584.5,11606.1,11671.2,11793.5,12196.2,12150.9,11794.6,11748.0,11748.0,11854.2,11853.1,12108.5,12181.9,11991.6,11954.1,11908.6,12035.3,12039.0,11402.1,11292.6,11246.3,11308.9,11240.7,11277.8,11287.7,11120.5,10722.3,10801.2,11051.0,11101.0,10932.7,10821.1,11951.5,11923.9,11812.0,11753.8,11744.9,11605.8,11854.6,12032.8,11995.2,11951.1,11942.2,11958.0,11786.1,12051.0,11869.0,11846.3,11630.3,11522.4,11590.2,11631.9,11752.5,11840.2,11908.6,11860.1,11684.9,11701.9,11778.1,11772.2,11836.1,11748.6,11760.9,11749.0,11700.9,11971.4,11843.2,11261.0,11042.7,11137.5,11200.3,11170.2,11221.6,11192.1,11365.9,11312.2,11229.5,11293.6,11177.8,11151.0,11045.1,11736.9,11959.1,11950.6,11929.5,11761.3,11652.1,11802.1,12031.2,11865.5,11740.2,11710.8,11718.8,11689.1,11784.0,12041.6,11839.5,11586.2,11574.0,11621.6,11652.1,11574.4,12089.2,12034.9,11880.7,11752.1,11743.8,11855.1,11801.0,11866.7,12093.7,11945.3,11823.3,11681.1,11726.2,11563.1,10977.9,11054.1,11161.4,11249.8,11047.9,11066.2,10975.0,11067.6,10785.4,10803.2,11083.5,10996.1,11011.1,10873.2,11828.8,11910.4,11755.2,11836.0,11729.5,11599.2,11821.2,11820.0,11821.9,11733.3,11879.8,11822.0,11768.9,11935.1,11800.5,11703.6,11581.1,11601.8,11534.9,11514.2,11713.1,11869.5,11938.6,11898.9,11783.9,11644.3,11622.5,11711.0,11790.9,11817.7,11869.3,11683.6,11527.7,11715.4,11470.0,11279.2,10887.7,10951.9,10994.7,10805.1,10883.1,10830.7,11289.1,11304.3,11091.1,11098.4,10877.2,10980.2,10875.8,11749.5,11923.3,12017.8,11953.0,11751.8,11669.7,11760.6,11965.6,11845.7,11689.0,11674.5,11683.7,11711.0,11786.9,11944.4,11788.0,11534.9,11536.2,11547.4,11605.5,11592.7,11945.9,11985.6,11818.7,11726.6,11760.6,11915.6,11844.6,11653.8,11733.3,11975.8,11809.7,11626.6,11674.5,11720.2,10967.2,10759.6,10863.3,11108.2,10967.2,11046.5,10893.8,11289.4,11088.3,10851.4,10940.0,10817.8,10867.9,10948.6,11690.3,11894.4,11792.5,11819.0,11680.9,11578.4,11772.1,11999.1,11781.6,11557.3,11654.8,11720.4,11722.3,11909.1,11992.3,11795.0,11458.6,11482.0,11497.1,11467.5,11673.8,12038.3,11967.0,11725.9,11668.2,11683.9,11713.5,11701.8,11833.8,12002.0,11846.4,11782.7,11611.9,11549.2,11429.5,11013.2,10936.3,11169.6,10971.5,10982.5,10893.5,10888.4,10961.5,10849.1,10798.8,10863.9,10883.9,10791.4,10819.1,11647.0,11829.6,11871.4,11732.0,11654.9,11610.2,11824.4,12116.5,11875.5,11908.5,11828.8,11857.2,11877.9,11971.3,12081.2,11845.2,11682.4,11584.3,11487.7,11568.2,11640.5,12061.8,12067.5,11880.6,11780.1,11611.5,11822.4,11722.1,12027.1,12057.4,12063.7,11862.8,11622.7,11779.8,11692.2,11012.0,11285.8,11307.6,11149.9,11023.4,11075.1,11110.5,10805.7,10557.8,10769.8,10916.7,10955.0,10881.0,10850.3,11745.2,11690.6,11644.8,11597.4,11670.0,11600.9,11774.1,12025.7,11893.9,11924.2,11928.8,12042.7,11919.5,11973.6,11952.8,11803.5,11687.5,11583.2,11520.0,11663.9,11711.2,12079.4,12001.6,12018.7,11773.0,11609.9,11639.9,11712.6,11817.9,11999.8,11966.8,11779.0,11610.4,11830.5,11615.0,11147.3,11011.0,11188.3,11107.6,11006.2,11162.9,11021.6,11274.4,11460.3,11171.2,11160.5,11068.8,11092.1,10959.5,11762.2,11926.5,12079.4,11883.7,11810.8,11727.3,11868.1,12126.7,11938.6,11911.4,11689.2,11829.5,11863.6,11914.4,12123.3,11819.4,11709.4,11648.2,11530.6,11691.9,11670.8,12158.6,12066.2,11882.8,11812.8,11694.0,11993.9,11844.0,12055.0,12083.7,12060.6,11892.3,11709.6,11750.0,11680.4,11356.6,11297.0,11315.1,11275.3,11082.3,11138.3,11160.2,10984.9,10881.1,10921.1,11054.7,11023.2,10893.2,10896.9,11601.2,11734.0,11807.4,11689.2,11689.0,11564.0,11775.7,12143.5,11963.0,12040.5,11937.9,12008.7,11889.7,12002.1,12104.2,11821.5,11744.6,11624.5,11628.6,11715.6,11760.8,12479.8,11982.6,11808.4,11781.0,11693.4,11876.6,11765.8,12234.5,12162.2,12072.2,11916.9,11830.6,11997.1,11887.4,11502.2,11191.1,11302.9,11338.8,11163.1,11306.1,11263.8,11164.8,10750.6,10912.9,11074.0,11020.6,10891.0,10794.2,11378.6,11623.9,11912.1,11790.9,11804.6,11517.4,11697.3,11851.7,11840.5,12186.2,12048.8,12036.1,11767.6,12013.2,12051.2,11752.2,11876.0,11543.8,11537.2,11555.8,11747.7,11995.5,11739.0,11771.9,11539.4,11456.2,11690.8,11767.5,12029.5,11747.9,11786.3,11614.4,11486.7,11902.1,11940.9,11717.0,11623.4,11709.7,11650.9,11278.1,11531.7,11641.8,11152.5,11246.8,11407.7,11395.9,11377.5,11323.1,11354.5,11196.3,11165.8,11439.9,11370.0,11484.2,11431.8,11631.2,11686.2,11628.8,11936.4,11611.5,11822.6,11727.3,11806.7,11934.0,11629.3,12085.8,11788.9,11824.8,11896.4,12018.2,12050.2,11677.9,11926.3,11654.7,11622.2,11891.2,11938.8,11938.8,11690.5,11843.9,11610.1,11602.1,11871.8,11949.7,11699.8,11520.9,11575.8,11522.3,11252.3,11776.2,11775.6,11297.1,11318.1,11476.5,11531.1,11321.5,11470.2,11391.5,11346.4,11443.8,11647.8,11619.7,11685.9,11576.1,11751.7,11814.4,11706.4,11945.3,11741.6,11813.1,11827.8,12024.8,12018.3,11573.6,11904.9,11713.0,11688.1,11869.5,12005.9,12322.6,11606.0,11769.3,11656.5,11659.1,11894.5,11993.3,12310.4,11943.8,11861.9,11692.3,11700.4,11950.7,12090.1,11969.8,11758.5,11630.6,11661.1,11408.1,11766.2,11815.0,11355.5,11346.4,11382.1,11522.8,11377.7,11493.1,11396.1,11294.7,11268.0,11481.0,11609.7,11731.4,11610.4,11708.9,11723.5,11671.3,12028.0,11839.8,11967.1,11853.7,12060.1,11916.4,11558.9,12064.6,11850.4,11882.1,11924.0,12086.5,12031.4,11647.3,11911.7,11659.0,11610.8,11891.0,12080.5,12020.5,11714.3,11956.7,11671.3,11619.9,11983.6,12144.0,11921.5,11699.4,11816.2,11683.6,11387.8,11942.4,12051.5,11564.5,11533.8,11654.7,11598.4,11474.1,11723.5,11671.4,11395.7,11420.9,11615.3,11596.4,11604.0,11768.5,11933.8,11609.2,11579.4,11892.3,11701.9,11772.8,11883.5,12071.2,11825.2,11559.1,12003.1,11785.5,11774.2,11938.8,12102.0,12398.8,11585.4,11917.8,11674.9,11662.9,11934.6,12061.9,12249.2,12105.1,11882.1,11643.5,11582.2,11966.3,12113.4,11520.8,11566.6,11528.0,11664.9,11448.1,11961.3,12072.1,10921.1,10950.5,11237.9,11507.0,11485.0,11855.3,11869.5,11260.2,11546.2,11814.9,11774.7,11835.0,11846.6,11973.4,12021.4,11956.2,12249.3,12068.6,12038.1,11902.9,12117.2,12269.8,11941.6,12122.0,11780.8,11722.2,11896.0,12112.4,12579.1,12067.7,11974.2,11792.6,11610.3,11938.5,12140.3,12595.1,12214.2,12154.3,11875.0,11639.2,12078.1,12210.4,11620.1,11713.1,11561.5,11646.3,11322.9,11658.7,11755.0,10917.9,10800.9,10982.4,11332.4,11072.0,11197.3,11364.9,11052.5,11172.4,11616.3,11645.6,11776.1,11405.9,11626.0,11759.8,11762.4,12290.5,12132.1,12325.1,11799.5,12152.9,12156.0,11781.1,12295.2,11851.6,11928.4,11886.2,12170.0,12253.6,11858.4,12101.5,11682.9,11582.8,11873.6,12143.3,12243.8,11900.7,12031.2,11688.4,11597.5,12109.0,12256.8,12085.0,11794.7,11738.3,11619.3,11177.2,11961.0,11938.0,11727.1,11611.1,11574.3,11670.6,11382.2,11575.2,11555.8,11426.4,11590.3,11709.8,11734.6,11849.7,11731.1,12035.7,11722.2,11765.8,11988.2,11861.1,11946.9,11961.4,12265.8,12098.3,11770.3,12058.8,11840.5,11847.3,11959.8,12228.1,12434.6,11811.7,11962.1,11744.0,11708.7,11972.2,12243.0,12034.4,11997.6,11907.0,11694.4,11665.6,12007.4,12346.2,11484.4,11814.2,11843.8,11704.8,11493.4,11958.1,12283.3,11324.0,11552.6,11699.1,11698.2,11589.3,11877.8,11954.5,11911.9,11849.5,11930.4,11721.1,11854.1,11884.3,12049.7,12073.1,11852.9,11974.2,11800.6,12046.4,11977.7,12218.7,12352.5,11632.4,11703.5,11789.6,11838.0,11931.1,12335.1,12588.5,12152.8,11911.0,11930.1,11879.5,11863.7,11985.1,12416.8,12169.7,11810.6,11630.2,11676.2,11548.4,11718.6,11312.6,11249.2,11274.1,11022.1,10846.4,10731.3,10979.3,10934.4,10745.3,10946.5,11204.7,11282.1,10728.5,10858.8,11562.9,11652.7,11957.2,11902.9,11953.9,11623.6,11802.9,12176.6,11995.0,12367.9,12204.4,12292.0,11833.9,12027.0,12409.1,11885.8,12092.3,11745.8,11780.1,11811.8,11999.5,12665.2,12174.8,12160.7,11825.3,11727.2,11940.1,12099.4,12478.8,12492.8,12100.4,11911.7,11745.6,12200.7,12144.1],"Persistencia":[12535.4,12029.3,12029.3,12029.3,12029.3,12029.3,12029.3,12535.4,12535.4,12029.3,12029.3,12029.3,12029.3,12029.3,12535.4,12535.4,12535.4,12029.3,12029.3,12029.3,12029.3,12535.4,12535.4,12535.4,12535.4,12029.3,12029.3,12029.3,12535.4,12535.4,12535.4,12535.4,12535.4,12029.3,12029.3,12535.4,12535.4,12535.4,12535.4,12535.4,12535.4,12029.3,12535.4,12535.4,12535.4,12535.4,12535.4,12535.4,12535.4,12042.8,12535.4,12535.4,12535.4,12535.4,12535.4,12535.4,12042.8,12042.8,12535.4,12535.4,12535.4,12535.4,12535.4,12042.8,12042.8,12042.8,12535.4,12535.4,12535.4,12535.4,12042.8,12042.8,12042.8,12042.8,12535.4,12535.4,12535.4,12042.8,12042.8,12042.8,12042.8,12042.8,12535.4,12535.4,12042.8,12042.8,12042.8,12042.8,12042.8,12042.8,12535.4,12042.8,12042.8,12042.8,12042.8,12042.8,12042.8,12042.8,11781.9,12042.8,12042.8,12042.8,12042.8,12042.8,12042.8,11781.9,11781.9,12042.8,12042.8,12042.8,12042.8,12042.8,11781.9,11781.9,11781.9,12042.8,12042.8,12042.8,12042.8,11781.9,11781.9,11781.9,11781.9,12042.8,12042.8,12042.8,11781.9,11781.9,11781.9,11781.9,11781.9,12042.8,12042.8,11781.9,11781.9,11781.9,11781.9,11781.9,11781.9,12042.8,11781.9,11781.9,11781.9,11781.9,11781.9,11781.9,11781.9,12286.3,11781.9,11781.9,11781.9,11781.9,11781.9,11781.9,12286.3,12286.3,11781.9,11781.9,11781.9,11781.9,11781.9,12286.3,12286.3,12286.3,11781.9,11781.9,11781.9,11781.9,12286.3,12286.3,12286.3,12286.3,11781.9,11781.9,11781.9,12286.3,12286.3,12286.3,12286.3,12286.3,11781.9,11781.9,12286.3,12286.3,12286.3,12286.3,12286.3,12286.3,11781.9,12286.3,12286.3,12286.3,12286.3,12286.3,12286.3,12286.3,13191.8,12286.3,12286.3,12286.3,12286.3,12286.3,12286.3,13191.8,13191.8,12286.3,12286.3,12286.3,12286.3,12286.3,13191.8,13191.8,13191.8,12286.3,12286.3,12286.3,12286.3,13191.8,13191.8,13191.8,13191.8,12286.3,12286.3,12286.3,13191.8,13191.8,13191.8,13191.8,13191.8,12286.3,12286.3,13191.8,13191.8,13191.8,13191.8,13191.8,13191.8,12286.3,13191.8,13191.8,13191.8,13191.8,13191.8,13191.8,13191.8,12328.8,13191.8,13191.8,13191.8,13191.8,13191.8,13191.8,12328.8,12328.8,13191.8,13191.8,13191.8,13191.8,13191.8,12328.8,12328.8,12328.8,13191.8,13191.8,13191.8,13191.8,12328.8,12328.8,12328.8,12328.8,13191.8,13191.8,13191.8,12328.8,12328.8,12328.8,12328.8,12328.8,13191.8,13191.8,12328.8,12328.8,12328.8,12328.8,12328.8,12328.8,13191.8,12328.8,12328.8,12328.8,12328.8,12328.8,12328.8,12328.8,12006.4,12328.8,12328.8,12328.8,12328.8,12328.8,12328.8,12006.4,12006.4,12328.8,12328.8,12328.8,12328.8,12328.8,12006.4,12006.4,12006.4,12328.8,12328.8,12328.8,12328.8,12006.4,12006.4,12006.4,12006.4,12328.8,12328.8,12328.8,12006.4,12006.4,12006.4,12006.4,12006.4,12328.8,12328.8,12006.4,12006.4,12006.4,12006.4,12006.4,12006.4,12328.8,12006.4,12006.4,12006.4,12006.4,12006.4,12006.4,12006.4,12025.1,12006.4,12006.4,12006.4,12006.4,12006.4,12006.4,12025.1,12025.1,12006.4,12006.4,12006.4,12006.4,12006.4,12025.1,12025.1,12025.1,12006.4,12006.4,12006.4,12006.4,12025.1,12025.1,12025.1,12025.1,12006.4,12006.4,12006.4,12025.1,12025.1,12025.1,12025.1,12025.1,12006.4,12006.4,12025.1,12025.1,12025.1,12025.1,12025.1,12025.1,12006.4,12025.1,12025.1,12025.1,12025.1,12025.1,12025.1,12025.1,12633.0,12025.1,12025.1,12025.1,12025.1,12025.1,12025.1,12633.0,12633.0,12025.1,12025.1,12025.1,12025.1,12025.1,12633.0,12633.0,12633.0,12025.1,12025.1,12025.1,12025.1,12633.0,12633.0,12633.0,12633.0,12025.1,12025.1,12025.1,12633.0,12633.0,12633.0,12633.0,12633.0,12025.1,12025.1,12633.0,12633.0,12633.0,12633.0,12633.0,12633.0,12025.1,12633.0,12633.0,12633.0,12633.0,12633.0,12633.0,12633.0,12227.8,12633.0,12633.0,12633.0,12633.0,12633.0,12633.0,12227.8,12227.8,12633.0,12633.0,12633.0,12633.0,12633.0,12227.8,12227.8,12227.8,12633.0,12633.0,12633.0,12633.0,12227.8,12227.8,12227.8,12227.8,12633.0,12633.0,12633.0,12227.8,12227.8,12227.8,12227.8,12227.8,12633.0,12633.0,12227.8,12227.8,12227.8,12227.8,12227.8,12227.8,12633.0,12227.8,12227.8,12227.8,12227.8,12227.8,12227.8,12227.8,12888.2,12227.8,12227.8,12227.8,12227.8,12227.8,12227.8,12888.2,12888.2,12227.8,12227.8,12227.8,12227.8,12227.8,12888.2,12888.2,12888.2,12227.8,12227.8,12227.8,12227.8,12888.2,12888.2,12888.2,12888.2,12227.8,12227.8,12227.8,12888.2,12888.2,12888.2,12888.2,12888.2,12227.8,12227.8,12888.2,12888.2,12888.2,12888.2,12888.2,12888.2,12227.8,12888.2,12888.2,12888.2,12888.2,12888.2,12888.2,12888.2,12617.8,12888.2,12888.2,12888.2,12888.2,12888.2,12888.2,12617.8,12617.8,12888.2,12888.2,12888.2,12888.2,12888.2,12617.8,12617.8,12617.8,12888.2,12888.2,12888.2,12888.2,12617.8,12617.8,12617.8,12617.8,12888.2,12888.2,12888.2,12617.8,12617.8,12617.8,12617.8,12617.8,12888.2,12888.2,12617.8,12617.8,12617.8,12617.8,12617.8,12617.8,12888.2,12617.8,12617.8,12617.8,12617.8,12617.8,12617.8,12617.8,11979.8,12617.8,12617.8,12617.8,12617.8,12617.8,12617.8,11979.8,11979.8,12617.8,12617.8,12617.8,12617.8,12617.8,11979.8,11979.8,11979.8,12617.8,12617.8,12617.8,12617.8,11979.8,11979.8,11979.8,11979.8,12617.8,12617.8,12617.8,11979.8,11979.8,11979.8,11979.8,11979.8,12617.8,12617.8,11979.8,11979.8,11979.8,11979.8,11979.8,11979.8,12617.8,11979.8,11979.8,11979.8,11979.8,11979.8,11979.8,11979.8,12388.3,11979.8,11979.8,11979.8,11979.8,11979.8,11979.8,12388.3,12388.3,11979.8,11979.8,11979.8,11979.8,11979.8,12388.3,12388.3,12388.3,11979.8,11979.8,11979.8,11979.8,12388.3,12388.3,12388.3,12388.3,11979.8,11979.8,11979.8,12388.3,12388.3,12388.3,12388.3,12388.3,11979.8,11979.8,12388.3,12388.3,12388.3,12388.3,12388.3,12388.3,11979.8,12388.3,12388.3,12388.3,12388.3,12388.3,12388.3,12388.3,12009.5,12388.3,12388.3,12388.3,12388.3,12388.3,12388.3,12009.5,12009.5,12388.3,12388.3,12388.3,12388.3,12388.3,12009.5,12009.5,12009.5,12388.3,12388.3,12388.3,12388.3,12009.5,12009.5,12009.5,12009.5,12388.3,12388.3,12388.3,12009.5,12009.5,12009.5,12009.5,12009.5,12388.3,12388.3,12009.5,12009.5,12009.5,12009.5,12009.5,12009.5,12388.3,12009.5,12009.5,12009.5,12009.5,12009.5,12009.5,12009.5,11735.8,12009.5,12009.5,12009.5,12009.5,12009.5,12009.5,11735.8,11735.8,12009.5,12009.5,12009.5,12009.5,12009.5,11735.8,11735.8,11735.8,12009.5,12009.5,12009.5,12009.5,11735.8,11735.8,11735.8,11735.8,12009.5,12009.5,12009.5,11735.8,11735.8,11735.8,11735.8,11735.8,12009.5,12009.5,11735.8,11735.8,11735.8,11735.8,11735.8,11735.8,12009.5,11735.8,11735.8,11735.8,11735.8,11735.8,11735.8,11735.8,12051.6,11735.8,11735.8,11735.8,11735.8,11735.8,11735.8,12051.6,12051.6,11735.8,11735.8,11735.8,11735.8,11735.8,12051.6,12051.6,12051.6,11735.8,11735.8,11735.8,11735.8,12051.6,12051.6,12051.6,12051.6,11735.8,11735.8,11735.8,12051.6,12051.6,12051.6,12051.6,12051.6,11735.8,11735.8,12051.6,12051.6,12051.6,12051.6,12051.6,12051.6,11735.8,12051.6,12051.6,12051.6,12051.6,12051.6,12051.6,12051.6,12077.9,12051.6,12051.6,12051.6,12051.6,12051.6,12051.6,12077.9,12077.9,12051.6,12051.6,12051.6,12051.6,12051.6,12077.9,12077.9,12077.9,12051.6,12051.6,12051.6,12051.6,12077.9,12077.9,12077.9,12077.9,12051.6,12051.6,12051.6,12077.9,12077.9,12077.9,12077.9,12077.9,12051.6,12051.6,12077.9,12077.9,12077.9,12077.9,12077.9,12077.9,12051.6,12077.9,12077.9,12077.9,12077.9,12077.9,12077.9,12077.9,12395.3,12077.9,12077.9,12077.9,12077.9,12077.9,12077.9,12395.3,12395.3,12077.9,12077.9,12077.9,12077.9,12077.9,12395.3,12395.3,12395.3,12077.9,12077.9,12077.9,12077.9,12395.3,12395.3,12395.3,12395.3,12077.9,12077.9,12077.9,12395.3,12395.3,12395.3,12395.3,12395.3,12077.9,12077.9,12395.3,12395.3,12395.3,12395.3,12395.3,12395.3,12077.9,12395.3,12395.3,12395.3,12395.3,12395.3,12395.3,12395.3,12345.7,12395.3,12395.3,12395.3,12395.3,12395.3,12395.3,12345.7,12345.7,12395.3,12395.3,12395.3,12395.3,12395.3,12345.7,12345.7,12345.7,12395.3,12395.3,12395.3,12395.3,12345.7,12345.7,12345.7,12345.7,12395.3,12395.3,12395.3,12345.7,12345.7,12345.7,12345.7,12345.7,12395.3,12395.3,12345.7,12345.7,12345.7,12345.7,12345.7,12345.7,12395.3,12345.7,12345.7,12345.7,12345.7,12345.7,12345.7,12345.7,13125.0,12345.7,12345.7,12345.7,12345.7,12345.7,12345.7,13125.0,13125.0,12345.7,12345.7,12345.7,12345.7,12345.7,13125.0,13125.0,13125.0,12345.7,12345.7,12345.7,12345.7,13125.0,13125.0,13125.0,13125.0,12345.7,12345.7,12345.7,13125.0,13125.0,13125.0,13125.0,13125.0,12345.7,12345.7,13125.0,13125.0,13125.0,13125.0,13125.0,13125.0,12345.7,13125.0,13125.0,13125.0,13125.0,13125.0,13125.0,13125.0,12934.3,13125.0,13125.0,13125.0,13125.0,13125.0,13125.0,12934.3,12934.3,13125.0,13125.0,13125.0,13125.0,13125.0,12934.3,12934.3,12934.3,13125.0,13125.0,13125.0,13125.0,12934.3,12934.3,12934.3,12934.3,13125.0,13125.0,13125.0,12934.3,12934.3,12934.3,12934.3,12934.3,13125.0,13125.0,12934.3,12934.3,12934.3,12934.3,12934.3,12934.3,13125.0,12934.3,12934.3,12934.3,12934.3,12934.3,12934.3,12934.3,13112.5,12934.3,12934.3,12934.3,12934.3,12934.3,12934.3,13112.5,13112.5,12934.3,12934.3,12934.3,12934.3,12934.3,13112.5,13112.5,13112.5,12934.3,12934.3,12934.3,12934.3,13112.5,13112.5,13112.5,13112.5,12934.3,12934.3,12934.3,13112.5,13112.5,13112.5,13112.5,13112.5,12934.3,12934.3,13112.5,13112.5,13112.5,13112.5,13112.5,13112.5,12934.3,13112.5,13112.5,13112.5,13112.5,13112.5,13112.5,13112.5,14151.8,13112.5,13112.5,13112.5,13112.5,13112.5,13112.5,14151.8,14151.8,13112.5,13112.5,13112.5,13112.5,13112.5,14151.8,14151.8,14151.8,13112.5,13112.5,13112.5,13112.5,14151.8,14151.8,14151.8,14151.8,13112.5,13112.5,13112.5,14151.8,14151.8,14151.8,14151.8,14151.8,13112.5,13112.5,14151.8,14151.8,14151.8,14151.8,14151.8,14151.8,13112.5,14151.8,14151.8,14151.8,14151.8,14151.8,14151.8,14151.8,13267.1,14151.8,14151.8,14151.8,14151.8,14151.8,14151.8,13267.1,13267.1,14151.8,14151.8,14151.8,14151.8,14151.8,13267.1,13267.1,13267.1,14151.8,14151.8,14151.8,14151.8,13267.1,13267.1,13267.1,13267.1,14151.8,14151.8,14151.8,13267.1,13267.1,13267.1,13267.1,13267.1,14151.8,14151.8,13267.1,13267.1,13267.1,13267.1,13267.1,13267.1,14151.8,13267.1,13267.1,13267.1,13267.1,13267.1,13267.1,13267.1,13498.5,13267.1,13267.1,13267.1,13267.1,13267.1,13267.1,13498.5,13498.5,13267.1,13267.1,13267.1,13267.1,13267.1,13498.5,13498.5,13498.5,13267.1,13267.1,13267.1,13267.1,13498.5,13498.5,13498.5,13498.5,13267.1,13267.1,13267.1,13498.5,13498.5,13498.5,13498.5,13498.5,13267.1,13267.1,13498.5,13498.5,13498.5,13498.5,13498.5,13498.5,13267.1,13498.5,13498.5,13498.5,13498.5,13498.5,13498.5,13498.5,13611.1,13498.5,13498.5,13498.5,13498.5,13498.5,13498.5,13611.1,13611.1,13498.5,13498.5,13498.5,13498.5,13498.5,13611.1,13611.1,13611.1,13498.5,13498.5,13498.5,13498.5,13611.1,13611.1,13611.1,13611.1,13498.5,13498.5,13498.5,13611.1,13611.1,13611.1,13611.1,13611.1,13498.5,13498.5,13611.1,13611.1,13611.1,13611.1,13611.1,13611.1,13498.5,13611.1,13611.1,13611.1,13611.1,13611.1,13611.1,13611.1,13254.0,13611.1,13611.1,13611.1,13611.1,13611.1,13611.1,13254.0,13254.0,13611.1,13611.1,13611.1,13611.1,13611.1,13254.0,13254.0,13254.0,13611.1,13611.1,13611.1,13611.1,13254.0,13254.0,13254.0,13254.0,13611.1,13611.1,13611.1,13254.0,13254.0,13254.0,13254.0,13254.0,13611.1,13611.1,13254.0,13254.0,13254.0,13254.0,13254.0,13254.0,13611.1,13254.0,13254.0,13254.0,13254.0,13254.0,13254.0,13254.0,13453.9,13254.0,13254.0,13254.0,13254.0,13254.0,13254.0,13453.9,13453.9,13254.0,13254.0,13254.0,13254.0,13254.0,13453.9,13453.9,13453.9,13254.0,13254.0,13254.0,13254.0,13453.9,13453.9,13453.9,13453.9,13254.0,13254.0,13254.0,13453.9,13453.9,13453.9,13453.9,13453.9,13254.0,13254.0,13453.9,13453.9,13453.9,13453.9,13453.9,13453.9,13254.0,13453.9,13453.9,13453.9,13453.9,13453.9,13453.9,13453.9,13231.4,13453.9,13453.9,13453.9,13453.9,13453.9,13453.9,13231.4,13231.4,13453.9,13453.9,13453.9,13453.9,13453.9,13231.4,13231.4,13231.4,13453.9,13453.9,13453.9,13453.9,13231.4,13231.4,13231.4,13231.4,13453.9,13453.9,13453.9,13231.4,13231.4,13231.4,13231.4,13231.4,13453.9,13453.9,13231.4,13231.4,13231.4,13231.4,13231.4,13231.4,13453.9,13231.4,13231.4,13231.4,13231.4,13231.4,13231.4,13231.4,13600.7,13231.4,13231.4,13231.4,13231.4,13231.4,13231.4,13600.7,13600.7,13231.4,13231.4,13231.4,13231.4,13231.4],"Estacional ingenuo":[10619.5,12029.3,12029.3,12029.3,12029.3,12029.3,12029.3,12391.9,12391.9,12029.3,12029.3,12029.3,12029.3,12029.3,12025.5,12025.5,12025.5,12029.3,12029.3,12029.3,12029.3,11269.4,11269.4,11269.4,11269.4,12029.3,12029.3,12029.3,13093.1,13093.1,13093.1,13093.1,13093.1,12029.3,12029.3,12920.7,12920.7,12920.7,12920.7,12920.7,12920.7,12029.3,12535.4,12535.4,12535.4,12535.4,12535.4,12535.4,12535.4,10422.2,12535.4,12535.4,12535.4,12535.4,12535.4,12535.4,12034.2,12034.2,12535.4,12535.4,12535.4,12535.4,12535.4,11584.4,11584.4,11584.4,12535.4,12535.4,12535.4,12535.4,10787.6,10787.6,10787.6,10787.6,12535.4,12535.4,12535.4,11968.2,11968.2,11968.2,11968.2,11968.2,12535.4,12535.4,12277.2,12277.2,12277.2,12277.2,12277.2,12277.2,12535.4,12042.8,12042.8,12042.8,12042.8,12042.8,12042.8,12042.8,12262.3,12042.8,12042.8,12042.8,12042.8,12042.8,12042.8,12629.3,12629.3,12042.8,12042.8,12042.8,12042.8,12042.8,11998.7,11998.7,11998.7,12042.8,12042.8,12042.8,12042.8,11349.9,11349.9,11349.9,11349.9,12042.8,12042.8,12042.8,12212.4,12212.4,12212.4,12212.4,12212.4,12042.8,12042.8,11847.7,11847.7,11847.7,11847.7,11847.7,11847.7,12042.8,11781.9,11781.9,11781.9,11781.9,11781.9,11781.9,11781.9,11936.5,11781.9,11781.9,11781.9,11781.9,11781.9,11781.9,12055.6,12055.6,11781.9,11781.9,11781.9,11781.9,11781.9,11590.8,11590.8,11590.8,11781.9,11781.9,11781.9,11781.9,10759.8,10759.8,10759.8,10759.8,11781.9,11781.9,11781.9,12796.4,12796.4,12796.4,12796.4,12796.4,11781.9,11781.9,12709.8,12709.8,12709.8,12709.8,12709.8,12709.8,11781.9,12286.3,12286.3,12286.3,12286.3,12286.3,12286.3,12286.3,12542.8,12286.3,12286.3,12286.3,12286.3,12286.3,12286.3,12768.2,12768.2,12286.3,12286.3,12286.3,12286.3,12286.3,11479.6,11479.6,11479.6,12286.3,12286.3,12286.3,12286.3,11050.7,11050.7,11050.7,11050.7,12286.3,12286.3,12286.3,12763.4,12763.4,12763.4,12763.4,12763.4,12286.3,12286.3,13130.6,13130.6,13130.6,13130.6,13130.6,13130.6,12286.3,13191.8,13191.8,13191.8,13191.8,13191.8,13191.8,13191.8,13213.8,13191.8,13191.8,13191.8,13191.8,13191.8,13191.8,12600.6,12600.6,13191.8,13191.8,13191.8,13191.8,13191.8,11949.9,11949.9,11949.9,13191.8,13191.8,13191.8,13191.8,11050.5,11050.5,11050.5,11050.5,13191.8,13191.8,13191.8,12789.3,12789.3,12789.3,12789.3,12789.3,13191.8,13191.8,12532.4,12532.4,12532.4,12532.4,12532.4,12532.4,13191.8,12328.8,12328.8,12328.8,12328.8,12328.8,12328.8,12328.8,12299.0,12328.8,12328.8,12328.8,12328.8,12328.8,12328.8,12492.3,12492.3,12328.8,12328.8,12328.8,12328.8,12328.8,12021.5,12021.5,12021.5,12328.8,12328.8,12328.8,12328.8,11275.7,11275.7,11275.7,11275.7,12328.8,12328.8,12328.8,12619.7,12619.7,12619.7,12619.7,12619.7,12328.8,12328.8,12223.3,12223.3,12223.3,12223.3,12223.3,12223.3,12328.8,12006.4,12006.4,12006.4,12006.4,12006.4,12006.4,12006.4,12131.9,12006.4,12006.4,12006.4,12006.4,12006.4,12006.4,12375.1,12375.1,12006.4,12006.4,12006.4,12006.4,12006.4,11556.1,11556.1,11556.1,12006.4,12006.4,12006.4,12006.4,10639.4,10639.4,10639.4,10639.4,12006.4,12006.4,12006.4,12153.6,12153.6,12153.6,12153.6,12153.6,12006.4,12006.4,12346.4,12346.4,12346.4,12346.4,12346.4,12346.4,12006.4,12025.1,12025.1,12025.1,12025.1,12025.1,12025.1,12025.1,12175.8,12025.1,12025.1,12025.1,12025.1,12025.1,12025.1,12454.9,12454.9,12025.1,12025.1,12025.1,12025.1,12025.1,11638.6,11638.6,11638.6,12025.1,12025.1,12025.1,12025.1,11148.1,11148.1,11148.1,11148.1,12025.1,12025.1,12025.1,12905.5,12905.5,12905.5,12905.5,12905.5,12025.1,12025.1,12856.7,12856.7,12856.7,12856.7,12856.7,12856.7,12025.1,12633.0,12633.0,12633.0,12633.0,12633.0,12633.0,12633.0,12424.8,12633.0,12633.0,12633.0,12633.0,12633.0,12633.0,12420.2,12420.2,12633.0,12633.0,12633.0,12633.0,12633.0,11988.1,11988.1,11988.1,12633.0,12633.0,12633.0,12633.0,11326.2,11326.2,11326.2,11326.2,12633.0,12633.0,12633.0,12679.3,12679.3,12679.3,12679.3,12679.3,12633.0,12633.0,12261.8,12261.8,12261.8,12261.8,12261.8,12261.8,12633.0,12227.8,12227.8,12227.8,12227.8,12227.8,12227.8,12227.8,12248.8,12227.8,12227.8,12227.8,12227.8,12227.8,12227.8,12503.4,12503.4,12227.8,12227.8,12227.8,12227.8,12227.8,11715.3,11715.3,11715.3,12227.8,12227.8,12227.8,12227.8,10889.6,10889.6,10889.6,10889.6,12227.8,12227.8,12227.8,12508.8,12508.8,12508.8,12508.8,12508.8,12227.8,12227.8,12562.9,12562.9,12562.9,12562.9,12562.9,12562.9,12227.8,12888.2,12888.2,12888.2,12888.2,12888.2,12888.2,12888.2,13018.3,12888.2,12888.2,12888.2,12888.2,12888.2,12888.2,12949.2,12949.2,12888.2,12888.2,12888.2,12888.2,12888.2,11906.5,11906.5,11906.5,12888.2,12888.2,12888.2,12888.2,11230.5,11230.5,11230.5,11230.5,12888.2,12888.2,12888.2,12628.5,12628.5,12628.5,12628.5,12628.5,12888.2,12888.2,12673.5,12673.5,12673.5,12673.5,12673.5,12673.5,12888.2,12617.8,12617.8,12617.8,12617.8,12617.8,12617.8,12617.8,12579.2,12617.8,12617.8,12617.8,12617.8,12617.8,12617.8,12370.6,12370.6,12617.8,12617.8,12617.8,12617.8,12617.8,11986.0,11986.0,11986.0,12617.8,12617.8,12617.8,12617.8,11785.6,11785.6,11785.6,11785.6,12617.8,12617.8,12617.8,12230.9,12230.9,12230.9,12230.9,12230.9,12617.8,12617.8,12157.3,12157.3,12157.3,12157.3,12157.3,12157.3,12617.8,11979.8,11979.8,11979.8,11979.8,11979.8,11979.8,11979.8,12427.4,11979.8,11979.8,11979.8,11979.8,11979.8,11979.8,12117.7,12117.7,11979.8,11979.8,11979.8,11979.8,11979.8,11710.0,11710.0,11710.0,11979.8,11979.8,11979.8,11979.8,11074.3,11074.3,11074.3,11074.3,11979.8,11979.8,11979.8,12567.8,12567.8,12567.8,12567.8,12567.8,11979.8,11979.8,12609.3,12609.3,12609.3,12609.3,12609.3,12609.3,11979.8,12388.3,12388.3,12388.3,12388.3,12388.3,12388.3,12388.3,11943.3,12388.3,12388.3,12388.3,12388.3,12388.3,12388.3,11344.4,11344.4,12388.3,12388.3,12388.3,12388.3,12388.3,11441.4,11441.4,11441.4,12388.3,12388.3,12388.3,12388.3,11115.5,11115.5,11115.5,11115.5,12388.3,12388.3,12388.3,12009.8,12009.8,12009.8,12009.8,12009.8,12388.3,12388.3,12249.3,12249.3,12249.3,12249.3,12249.3,12249.3,12388.3,12009.5,12009.5,12009.5,12009.5,12009.5,12009.5,12009.5,12361.8,12009.5,12009.5,12009.5,12009.5,12009.5,12009.5,12406.7,12406.7,12009.5,12009.5,12009.5,12009.5,12009.5,11456.9,11456.9,11456.9,12009.5,12009.5,12009.5,12009.5,11131.3,11131.3,11131.3,11131.3,12009.5,12009.5,12009.5,12147.6,12147.6,12147.6,12147.6,12147.6,12009.5,12009.5,12486.2,12486.2,12486.2,12486.2,12486.2,12486.2,12009.5,11735.8,11735.8,11735.8,11735.8,11735.8,11735.8,11735.8,11958.2,11735.8,11735.8,11735.8,11735.8,11735.8,11735.8,11817.0,11817.0,11735.8,11735.8,11735.8,11735.8,11735.8,11494.7,11494.7,11494.7,11735.8,11735.8,11735.8,11735.8,10840.5,10840.5,10840.5,10840.5,11735.8,11735.8,11735.8,12377.6,12377.6,12377.6,12377.6,12377.6,11735.8,11735.8,12242.8,12242.8,12242.8,12242.8,12242.8,12242.8,11735.8,12051.6,12051.6,12051.6,12051.6,12051.6,12051.6,12051.6,11967.3,12051.6,12051.6,12051.6,12051.6,12051.6,12051.6,12233.5,12233.5,12051.6,12051.6,12051.6,12051.6,12051.6,11693.2,11693.2,11693.2,12051.6,12051.6,12051.6,12051.6,11046.6,11046.6,11046.6,11046.6,12051.6,12051.6,12051.6,12580.9,12580.9,12580.9,12580.9,12580.9,12051.6,12051.6,12452.4,12452.4,12452.4,12452.4,12452.4,12452.4,12051.6,12077.9,12077.9,12077.9,12077.9,12077.9,12077.9,12077.9,12350.1,12077.9,12077.9,12077.9,12077.9,12077.9,12077.9,11173.9,11173.9,12077.9,12077.9,12077.9,12077.9,12077.9,11507.6,11507.6,11507.6,12077.9,12077.9,12077.9,12077.9,11427.2,11427.2,11427.2,11427.2,12077.9,12077.9,12077.9,12409.8,12409.8,12409.8,12409.8,12409.8,12077.9,12077.9,12258.6,12258.6,12258.6,12258.6,12258.6,12258.6,12077.9,12395.3,12395.3,12395.3,12395.3,12395.3,12395.3,12395.3,12475.4,12395.3,12395.3,12395.3,12395.3,12395.3,12395.3,12484.2,12484.2,12395.3,12395.3,12395.3,12395.3,12395.3,11700.5,11700.5,11700.5,12395.3,12395.3,12395.3,12395.3,11126.5,11126.5,11126.5,11126.5,12395.3,12395.3,12395.3,12508.9,12508.9,12508.9,12508.9,12508.9,12395.3,12395.3,12724.2,12724.2,12724.2,12724.2,12724.2,12724.2,12395.3,12345.7,12345.7,12345.7,12345.7,12345.7,12345.7,12345.7,12431.4,12345.7,12345.7,12345.7,12345.7,12345.7,12345.7,12578.4,12578.4,12345.7,12345.7,12345.7,12345.7,12345.7,11737.1,11737.1,11737.1,12345.7,12345.7,12345.7,12345.7,11100.6,11100.6,11100.6,11100.6,12345.7,12345.7,12345.7,12489.3,12489.3,12489.3,12489.3,12489.3,12345.7,12345.7,12715.6,12715.6,12715.6,12715.6,12715.6,12715.6,12345.7,13125.0,13125.0,13125.0,13125.0,13125.0,13125.0,13125.0,12409.0,13125.0,13125.0,13125.0,13125.0,13125.0,13125.0,13223.2,13223.2,13125.0,13125.0,13125.0,13125.0,13125.0,13039.1,13039.1,13039.1,13125.0,13125.0,13125.0,13125.0,12383.9,12383.9,12383.9,12383.9,13125.0,13125.0,13125.0,12998.2,12998.2,12998.2,12998.2,12998.2,13125.0,13125.0,12653.2,12653.2,12653.2,12653.2,12653.2,12653.2,13125.0,12934.3,12934.3,12934.3,12934.3,12934.3,12934.3,12934.3,12685.5,12934.3,12934.3,12934.3,12934.3,12934.3,12934.3,12680.2,12680.2,12934.3,12934.3,12934.3,12934.3,12934.3,11985.7,11985.7,11985.7,12934.3,12934.3,12934.3,12934.3,11940.5,11940.5,11940.5,11940.5,12934.3,12934.3,12934.3,13206.9,13206.9,13206.9,13206.9,13206.9,12934.3,12934.3,12998.5,12998.5,12998.5,12998.5,12998.5,12998.5,12934.3,13112.5,13112.5,13112.5,13112.5,13112.5,13112.5,13112.5,12915.9,13112.5,13112.5,13112.5,13112.5,13112.5,13112.5,13360.0,13360.0,13112.5,13112.5,13112.5,13112.5,13112.5,12227.6,12227.6,12227.6,13112.5,13112.5,13112.5,13112.5,11823.8,11823.8,11823.8,11823.8,13112.5,13112.5,13112.5,12952.2,12952.2,12952.2,12952.2,12952.2,13112.5,13112.5,13570.4,13570.4,13570.4,13570.4,13570.4,13570.4,13112.5,14151.8,14151.8,14151.8,14151.8,14151.8,14151.8,14151.8,13104.1,14151.8,14151.8,14151.8,14151.8,14151.8,14151.8,13492.3,13492.3,14151.8,14151.8,14151.8,14151.8,14151.8,12745.4,12745.4,12745.4,14151.8,14151.8,14151.8,14151.8,12381.2,12381.2,12381.2,12381.2,14151.8,14151.8,14151.8,13538.0,13538.0,13538.0,13538.0,13538.0,14151.8,14151.8,12986.0,12986.0,12986.0,12986.0,12986.0,12986.0,14151.8,13267.1,13267.1,13267.1,13267.1,13267.1,13267.1,13267.1,13045.4,13267.1,13267.1,13267.1,13267.1,13267.1,13267.1,13521.4,13521.4,13267.1,13267.1,13267.1,13267.1,13267.1,12807.8,12807.8,12807.8,13267.1,13267.1,13267.1,13267.1,12663.7,12663.7,12663.7,12663.7,13267.1,13267.1,13267.1,13354.9,13354.9,13354.9,13354.9,13354.9,13267.1,13267.1,13668.2,13668.2,13668.2,13668.2,13668.2,13668.2,13267.1,13498.5,13498.5,13498.5,13498.5,13498.5,13498.5,13498.5,13167.6,13498.5,13498.5,13498.5,13498.5,13498.5,13498.5,13024.0,13024.0,13498.5,13498.5,13498.5,13498.5,13498.5,12515.5,12515.5,12515.5,13498.5,13498.5,13498.5,13498.5,12036.7,12036.7,12036.7,12036.7,13498.5,13498.5,13498.5,12357.5,12357.5,12357.5,12357.5,12357.5,13498.5,13498.5,13693.0,13693.0,13693.0,13693.0,13693.0,13693.0,13498.5,13611.1,13611.1,13611.1,13611.1,13611.1,13611.1,13611.1,13323.3,13611.1,13611.1,13611.1,13611.1,13611.1,13611.1,13016.3,13016.3,13611.1,13611.1,13611.1,13611.1,13611.1,13167.0,13167.0,13167.0,13611.1,13611.1,13611.1,13611.1,12468.6,12468.6,12468.6,12468.6,13611.1,13611.1,13611.1,13990.4,13990.4,13990.4,13990.4,13990.4,13611.1,13611.1,13574.8,13574.8,13574.8,13574.8,13574.8,13574.8,13611.1,13254.0,13254.0,13254.0,13254.0,13254.0,13254.0,13254.0,13652.0,13254.0,13254.0,13254.0,13254.0,13254.0,13254.0,13706.3,13706.3,13254.0,13254.0,13254.0,13254.0,13254.0,13016.8,13016.8,13016.8,13254.0,13254.0,13254.0,13254.0,12372.7,12372.7,12372.7,12372.7,13254.0,13254.0,13254.0,13321.7,13321.7,13321.7,13321.7,13321.7,13254.0,13254.0,13960.2,13960.2,13960.2,13960.2,13960.2,13960.2,13254.0,13453.9,13453.9,13453.9,13453.9,13453.9,13453.9,13453.9,11356.7,13453.9,13453.9,13453.9,13453.9,13453.9,13453.9,11911.8,11911.8,13453.9,13453.9,13453.9,13453.9,13453.9,10707.6,10707.6,10707.6,13453.9,13453.9,13453.9,13453.9,10723.1,10723.1,10723.1,10723.1,13453.9,13453.9,13453.9,11869.8,11869.8,11869.8,11869.8,11869.8,13453.9,13453.9,13306.6,13306.6,13306.6,13306.6,13306.6,13306.6,13453.9,13231.4,13231.4,13231.4,13231.4,13231.4,13231.4,13231.4,13073.5,13231.4,13231.4,13231.4,13231.4,13231.4,13231.4,13036.6,13036.6,13231.4,13231.4,13231.4,13231.4,13231.4]},"rejilla":[-1.0,-0.95,-0.9,-0.85,-0.8,-0.75,-0.7,-0.65,-0.6,-0.55,-0.5,-0.45,-0.4,-0.35,-0.3,-0.25,-0.2,-0.15,-0.1,-0.05,0.0,0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1.0,1.05,1.1,1.15,1.2,1.25,1.3,1.35,1.4,1.45,1.5,1.55,1.6,1.65,1.7,1.75,1.8],"calib":{"SARIMAX":[0.0575,0.0578,0.0583,0.0581,0.0581,0.0592,0.0595,0.0602,0.0612,0.0618,0.0625,0.0652,0.0688,0.0714,0.0754,0.0806,0.0847,0.0888,0.0956,0.1005,0.1085,0.1136,0.1213,0.1308,0.134,0.1373,0.1295,0.1347,0.1383,0.1314,0.1449,0.1312,0.1471,0.1534,0.1512,0.1445,0.1322,0.1376,0.1212,0.1257,0.0784,0.0597,0.048,0.0345,0.0182,0.0192,0.0194,0.0202,0.0213,0.022,0.0241,0.026,0.027,0.0274,0.0274,0.0278,0.0278],"CatBoost":[0.0596,0.061,0.0617,0.0625,0.0631,0.065,0.0673,0.0692,0.072,0.074,0.0778,0.0822,0.0847,0.0893,0.0939,0.0989,0.1043,0.1103,0.119,0.1244,0.1297,0.1367,0.1453,0.1529,0.1544,0.1613,0.1699,0.1791,0.1767,0.1728,0.1709,0.1672,0.1656,0.1434,0.1265,0.1368,0.1448,0.14,0.1505,0.1477,0.1227,0.1184,0.0845,0.0602,0.0496,0.0504,0.0508,0.0526,0.055,0.0566,0.0388,0.0404,0.0412,0.0215,0.0222,0.0225,0.023],"Prophet":[0.0788,0.082,0.0821,0.0825,0.0866,0.0917,0.0894,0.0946,0.1004,0.1044,0.106,0.1108,0.117,0.1208,0.1261,0.1345,0.1398,0.1453,0.1497,0.1569,0.1609,0.1659,0.1728,0.1801,0.187,0.1968,0.1971,0.2066,0.2118,0.2008,0.2129,0.2105,0.2206,0.1895,0.1955,0.1951,0.195,0.1959,0.1979,0.2082,0.2023,0.2075,0.185,0.1923,0.1354,0.1277,0.1356,0.1412,0.135,0.1192,0.1119,0.1159,0.1231,0.1111,0.1129,0.1129,0.1129],"LSTM":[0.0589,0.0599,0.0601,0.0612,0.0618,0.0633,0.064,0.0637,0.0646,0.0661,0.0684,0.071,0.0707,0.0745,0.0769,0.0805,0.0787,0.0783,0.0823,0.0875,0.0893,0.0957,0.1016,0.1043,0.1149,0.1197,0.122,0.1311,0.1341,0.1319,0.1353,0.1333,0.1131,0.1165,0.1214,0.1278,0.125,0.0822,0.0676,0.0638,0.0678,0.0491,0.0392,0.0417,0.0429,0.0299,0.0152,0.0154,0.016,0.0165,0.0165,0.0168,0.0175,0.0187,0.0,0.0,0.0],"Persistencia":[0.0552,0.0557,0.056,0.0548,0.0556,0.0564,0.0575,0.0586,0.0593,0.0604,0.0619,0.0642,0.0662,0.0685,0.0712,0.0688,0.0666,0.0675,0.0657,0.0655,0.0676,0.0662,0.0688,0.0637,0.0651,0.057,0.0585,0.0597,0.0615,0.0637,0.0665,0.0689,0.0589,0.0591,0.0583,0.0571,0.0593,0.0614,0.061,0.0598,0.0576,0.0564,0.057,0.0591,0.0605,0.0615,0.0601,0.0609,0.0615,0.0636,0.0655,0.058,0.0597,0.0616,0.0629,0.0657,0.0638],"Estacional ingenuo":[0.0556,0.0561,0.0566,0.0557,0.0563,0.0568,0.0578,0.0591,0.0598,0.0608,0.0624,0.0649,0.0668,0.0693,0.0713,0.0692,0.0703,0.0722,0.0714,0.0676,0.0701,0.0695,0.0725,0.0711,0.0672,0.0592,0.0589,0.062,0.0607,0.064,0.0657,0.069,0.0588,0.06,0.0592,0.0582,0.0618,0.0651,0.065,0.0647,0.0618,0.0605,0.0575,0.061,0.0638,0.0656,0.0673,0.0642,0.0655,0.0677,0.0703,0.0728,0.0749,0.0778,0.0807,0.0861,0.0881]},"kopt":{"SARIMAX":0.65,"CatBoost":0.35,"Prophet":0.6,"LSTM":0.5,"Persistencia":-0.3,"Estacional ingenuo":1.75},"kEtiqueta":1.75,"eventos":8};
+
+/* ---------------- formato ---------------- */
+const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const nf = (v, d = 0) => v == null || !isFinite(v) ? "—" :
+  v.toLocaleString("es-CL", {minimumFractionDigits: d, maximumFractionDigits: d})
+   .replace("-", "−");
+const pf = (v, d = 2) => v == null || !isFinite(v) ? "—" : nf(v, d) + "%";
+const kf = v => (v < 0 ? "−" : "") + nf(Math.abs(v), 2);
+const fFecha = s => { const [a,m,d] = s.split("-"); return `${+d} ${MESES[+m-1]} ${a}`; };
+const fMes   = s => { const [a,m] = s.split("-"); return `${MESES[+m-1]} ${a.slice(2)}`; };
+
+/* ---------------- glosario ---------------- */
+// Una sola fuente para las definiciones: alimenta tanto los globos de ayuda
+// como la guía desplegable, de modo que no puedan contradecirse.
+const DEF = {
+  mae: ["MAE", "Error absoluto medio. Promedio de la diferencia entre la demanda pronosticada y la observada, en megawatts, sin importar el signo."],
+  mape: ["MAPE", "Error porcentual absoluto medio. El mismo error expresado como porcentaje de la demanda observada, lo que permite comparar períodos de distinto nivel."],
+  r2: ["R²", "Proporción de la variación de la demanda que el modelo logra explicar. Vale 1 si acierta siempre y 0 si no supera a predecir el promedio; un valor negativo significa que predice peor que el promedio."],
+  bias: ["BIAS", "Sesgo. Error medio con signo: negativo si el modelo subestima la demanda de forma sistemática, positivo si la sobreestima."],
+  det: ["Detección", "Eventos extremos anticipados sobre el total de oportunidades de detección. Con los siete horizontes activos cada evento se evalúa siete veces, una por cada día de antelación."],
+  f1: ["F1", "Media armónica entre precisión y exhaustividad. Resume en un número qué tan bien el esquema equilibra no perder eventos y no llenar de falsas alarmas."],
+  prec: ["Precisión", "De todas las alertas emitidas, qué proporción correspondió a un evento real. Baja cuando el esquema es alarmista."],
+  exh: ["Exhaustividad", "De todos los eventos reales, qué proporción fue anticipada con una alerta. Baja cuando el esquema deja escapar eventos."],
+  vp: ["Verdadero positivo", "Se emitió alerta y el día resultó ser un peak extremo. Es el acierto que justifica el esquema."],
+  fp: ["Falso positivo", "Se emitió alerta y el día resultó normal. Es el costo operacional de una alarma innecesaria."],
+  fn: ["Falso negativo", "El día fue un peak extremo y no se emitió alerta. Es el evento que se escapó, el error más caro del esquema."],
+  vn: ["Verdadero negativo", "No se emitió alerta y el día fue normal. Es la mayoría de los días."],
+  z: ["ẑ (desviación estandarizada)", "Cuántas desviaciones típicas se aparta la demanda pronosticada del nivel esperado para ese día. Es la magnitud que se compara contra el umbral."],
+  k: ["k (umbral de alerta)", "Se emite alerta cuando ẑ supera este valor. Subirlo reduce las falsas alarmas y deja escapar más eventos; bajarlo hace lo contrario. La elección es operacional, no técnica."],
+  nivel: ["Nivel esperado", "Producto del nivel base de los últimos 28 días por el factor del día de la semana. Es la demanda que correspondería a ese día si no ocurriera nada extraordinario."],
+  h: ["Horizonte", "Días de antelación entre el origen del pronóstico y el día pronosticado. h = 1 es el día siguiente; h = 7, el séptimo."],
+  evento: ["Evento extremo", "Día cuya demanda observada superó el nivel esperado en más de 1,75 desviaciones típicas. Es la definición que etiqueta la variable objetivo y no cambia con el umbral de alerta."],
+};
+const info = clave => !DEF[clave] ? "" :
+  `<span class="info" tabindex="0" role="note" aria-label="${DEF[clave][0]}: ${DEF[clave][1]}" data-tip="${DEF[clave][1]}">i</span>`;
+
+/* ---------------- estado ---------------- */
+const S = {modelo: "CatBoost", h: 0, k: 0.35};   // h = 0 → todos los horizontes
+if (!D.modelos.includes(S.modelo)) S.modelo = D.modelos[0];
+
+const N = D.fechas.length, H = 7, OFF = 7;
+S.origen = N - 1;                 // último origen con los siete días completos
+const zhat = (m, i, h) => {
+  const o = i + OFF - h;                                  // índice del origen
+  return (D.yhat[m][i*H + h - 1] / (D.bo[o] * D.f[i]) - 1) / D.so[o];
+};
+
+/* ---------------- métricas ---------------- */
+function metricas(m, h, k){
+  const hs = h ? [h] : [1,2,3,4,5,6,7];
+  let n = 0, sae = 0, sape = 0, sse = 0, sbias = 0, sy = 0;
+  let vp = 0, fp = 0, fn = 0, vn = 0;
+  for (const hh of hs) for (let i = 0; i < N; i++){
+    const y = D.y[i], yh = D.yhat[m][i*H + hh - 1], e = yh - y;
+    n++; sae += Math.abs(e); sape += Math.abs(e)/y; sbias += e/y; sy += y;
+    const al = zhat(m, i, hh) > k, ev = D.etiqueta[i] === 1;
+    if (al && ev) vp++; else if (al) fp++; else if (ev) fn++; else vn++;
+  }
+  const my = sy/n;
+  for (const hh of hs) for (let i = 0; i < N; i++){
+    const e = D.yhat[m][i*H + hh - 1] - D.y[i];
+    sse += e*e;
+  }
+  let sst = 0;
+  for (const hh of hs) for (let i = 0; i < N; i++) sst += (D.y[i]-my)**2;
+  // eventos distintos anticipados con al menos uno de los horizontes evaluados
+  let evDist = 0;
+  for (let i = 0; i < N; i++)
+    if (D.etiqueta[i] === 1 && hs.some(hh => zhat(m,i,hh) > k)) evDist++;
+  const prec = vp+fp ? vp/(vp+fp) : null, exh = vp+fn ? vp/(vp+fn) : null;
+  return {n, mae: sae/n, mape: 100*sape/n, bias: 100*sbias/n, r2: 1-sse/sst,
+          vp, fp, fn, vn, prec, exh,
+          f1: prec && exh ? 2*prec*exh/(prec+exh) : 0,
+          oportunidades: vp+fn, evDist};
+}
+
+/* ---------------- escalas y ayudas svg ---------------- */
+const esc = (v, d0, d1, r0, r1) => r0 + (v-d0)/(d1-d0)*(r1-r0);
+const ticksY = (lo, hi, n = 5) => {
+  const paso = Math.pow(10, Math.floor(Math.log10((hi-lo)/n)));
+  const cand = [1,2,2.5,5,10].map(x => x*paso);
+  const p = cand.find(x => (hi-lo)/x <= n) ?? cand[cand.length-1];
+  const t = []; for (let v = Math.ceil(lo/p)*p; v <= hi; v += p) t.push(+v.toFixed(6));
+  return t;
+};
+const el = (t, a, hijos) => {
+  const s = Object.entries(a).map(([k,v]) => `${k}="${v}"`).join(" ");
+  return hijos == null ? `<${t} ${s}/>` : `<${t} ${s}>${hijos}</${t}>`;
+};
+const linea = (pts, color, w = 2, extra = {}) =>
+  el("path", {d: "M" + pts.map(p => `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join("L"),
+    fill: "none", stroke: color, "stroke-width": w,
+    "stroke-linecap": "round", "stroke-linejoin": "round", ...extra});
+const txt = (x, y, s, a = {}) =>
+  el("text", {x, y, fill: "var(--ink-muted)", "font-size": 10.5,
+    "font-family": "inherit", ...a}, s);
+
+/* ---------------- gráfico principal ---------------- */
+const GEO = {w: 980, hp: 300, hr: 46, ml: 60, mr: 14, mt: 14, mb: 26};
+let serieCache = null;
+
+function dibujarSerie(){
+  const m = S.modelo, hs = S.h ? [S.h] : [1,2,3,4,5,6,7];
+  const {w, hp, hr, ml, mr, mt, mb} = GEO;
+  const x0 = ml, x1 = w - mr, y0 = mt, y1 = mt + hp;
+  const rib0 = y1 + 20, filaH = 11, gapR = 7;
+  const alto = rib0 + filaH*2 + gapR + mb;
+
+  // bandas y líneas
+  const lo = [], hi = [], mid = [];
+  for (let i = 0; i < N; i++){
+    let a = Infinity, b = -Infinity, s = 0;
+    for (const hh of hs){ const v = D.yhat[m][i*H+hh-1]; a = Math.min(a,v); b = Math.max(b,v); s += v; }
+    lo.push(a); hi.push(b); mid.push(s/hs.length);
+  }
+  const vals = D.y.concat(lo, hi);
+  let vlo = Math.min(...vals), vhi = Math.max(...vals);
+  const pad = (vhi-vlo)*0.08; vlo -= pad; vhi += pad;
+  const X = i => esc(i, 0, N-1, x0, x1);
+  const Y = v => esc(v, vlo, vhi, y1, y0);
+  const ty = ticksY(vlo, vhi, 5);
+
+  let g = "";
+  // rejilla + eje y
+  for (const t of ty){
+    g += el("line", {x1:x0, x2:x1, y1:Y(t).toFixed(1), y2:Y(t).toFixed(1),
+      stroke:"var(--grid)", "stroke-width":1});
+    g += txt(x0-9, Y(t)+3.5, nf(t), {"text-anchor":"end",
+      style:"font-variant-numeric:tabular-nums"});
+  }
+  g += txt(x0-9, y0-4, "MW", {"text-anchor":"end", "font-weight":650});
+  // eje x: inicio de mes
+  for (let i = 0; i < N; i++){
+    if (D.fechas[i].slice(8) !== "01") continue;
+    g += el("line", {x1:X(i).toFixed(1), x2:X(i).toFixed(1), y1:y0, y2:rib0+filaH*2+gapR,
+      stroke:"var(--grid)", "stroke-width":1});
+    g += txt(X(i), alto-mb+16, fMes(D.fechas[i]), {"text-anchor":"middle"});
+  }
+  g += el("line", {x1:x0, x2:x1, y1:y1, y2:y1, stroke:"var(--axis)", "stroke-width":1});
+
+  // banda del rango de horizontes
+  if (hs.length > 1){
+    const arriba = hi.map((v,i) => [X(i), Y(v)]);
+    const abajo  = lo.map((v,i) => [X(i), Y(v)]).reverse();
+    g += el("path", {d: "M" + arriba.concat(abajo).map(p =>
+      `${p[0].toFixed(1)},${p[1].toFixed(1)}`).join("L") + "Z",
+      fill:"var(--series-2)", "fill-opacity":.21, stroke:"none"});
+  }
+  // líneas: observado (slot 1) y pronóstico (slot 2)
+  g += linea(mid.map((v,i) => [X(i), Y(v)]), "var(--series-2)", 2);
+  g += linea(D.y.map((v,i) => [X(i), Y(v)]), "var(--series-1)", 2);
+
+  // marcas de eventos reales sobre la observada
+  const marcas = [];
+  for (let i = 0; i < N; i++){
+    if (D.etiqueta[i] !== 1) continue;
+    marcas.push({i, det: hs.some(hh => zhat(m,i,hh) > S.k)});
+  }
+  // Los detectados primero y los no detectados encima: en días consecutivos las
+  // marcas se solapan, y un evento que se escapó no puede quedar tapado por uno
+  // que sí se anticipó.
+  for (const det of [true, false])
+    for (const mk of marcas.filter(x => x.det === det))
+      g += el("circle", {cx:X(mk.i).toFixed(1), cy:Y(D.y[mk.i]).toFixed(1), r:5.5,
+        fill: det ? "var(--good)" : "var(--critical)",
+        stroke:"var(--surface-1)", "stroke-width":2});
+
+  // cinta de estado
+  const cinta = (fila, idxs, color, hueco) => {
+    const yy = rib0 + fila*(filaH+gapR);
+    let s = el("rect", {x:x0, y:yy, width:x1-x0, height:filaH, rx:3,
+      fill:"var(--ghost)", stroke:"none"});
+    const anch = Math.max(2.2, (x1-x0)/N - 0.8);
+    for (const i of idxs)
+      s += el("rect", {x:(X(i)-anch/2).toFixed(1), y:yy, width:anch.toFixed(1), height:filaH,
+        rx:1.5, fill: hueco ? "none" : color,
+        stroke: hueco ? color : "none", "stroke-width": hueco ? 1.4 : 0});
+    return s;
+  };
+  const alertas = [];
+  for (let i = 0; i < N; i++) if (hs.some(hh => zhat(m,i,hh) > S.k)) alertas.push(i);
+  const eventos = []; for (let i = 0; i < N; i++) if (D.etiqueta[i] === 1) eventos.push(i);
+  g += cinta(0, alertas, "var(--series-2)", false);
+  g += cinta(1, eventos, "var(--critical)", false);
+  g += txt(x0-9, rib0+filaH-1.5, "Alerta", {"text-anchor":"end"});
+  g += txt(x0-9, rib0+filaH+gapR+filaH-1.5, "Evento", {"text-anchor":"end"});
+
+  // capa de interacción
+  // Arranca sobre el primer punto, no en (0,0): invisible igual, pero así no
+  // asoma fuera del viewBox antes del primer hover.
+  g += el("g", {id:"cross", opacity:0},
+      el("line", {x1:x0, x2:x0, y1:y0, y2:rib0+filaH*2+gapR, stroke:"var(--ink-muted)",
+        "stroke-width":1, "stroke-dasharray":"3 3"})
+    + el("circle", {cx:x0, cy:Y(D.y[0]).toFixed(1), r:4.5, fill:"var(--series-1)",
+        stroke:"var(--surface-1)", "stroke-width":2, id:"cObs"})
+    + el("circle", {cx:x0, cy:Y(mid[0]).toFixed(1), r:4.5, fill:"var(--series-2)",
+        stroke:"var(--surface-1)", "stroke-width":2, id:"cPre"}));
+  g += el("rect", {id:"hit", x:x0, y:y0, width:x1-x0, height:rib0+filaH*2+gapR-y0,
+    fill:"transparent", style:"cursor:crosshair"});
+
+  const svg = document.getElementById("svgSerie");
+  svg.setAttribute("viewBox", `0 0 ${w} ${alto}`);
+  svg.innerHTML = g;
+  serieCache = {X, Y, mid, lo, hi, hs, x0, x1, y0, alto, marcas};
+  enlazarHover();
+
+  // leyenda
+  const L = [
+    `<span class="lg"><span class="sw" style="background:var(--series-1)"></span>Demanda observada</span>`,
+    `<span class="lg"><span class="sw" style="background:var(--series-2)"></span>Pronóstico${hs.length>1?" (promedio de h = 1 … 7)":` (h = ${S.h})`}</span>`,
+    ...(hs.length>1 ? [`<span class="lg"><span class="sw band" style="background:var(--series-2);opacity:.28"></span>Rango de los siete horizontes</span>`] : []),
+    `<span class="lg"><span class="sw mk" style="background:var(--good)"></span>Evento detectado</span>`,
+    `<span class="lg"><span class="sw mk" style="background:var(--critical)"></span>Evento no detectado</span>`];
+  document.getElementById("legSerie").innerHTML = L.join("");
+  document.getElementById("pSerie").textContent =
+    hs.length > 1
+      ? `Los 212 días del conjunto de prueba. La banda cubre los siete pronósticos emitidos para cada día, uno por horizonte; la línea es su promedio. Las cintas inferiores marcan los días con alerta emitida y los eventos extremos reales.`
+      : `Los 212 días del conjunto de prueba, con el pronóstico emitido ${S.h} día${S.h>1?"s":""} antes. Las cintas inferiores marcan los días con alerta emitida y los eventos extremos reales.`;
+}
+
+/* ---------------- hover del gráfico principal ---------------- */
+function enlazarHover(){
+  const svg = document.getElementById("svgSerie");
+  const hit = document.getElementById("hit");
+  const cross = document.getElementById("cross");
+  const tip = document.getElementById("tipSerie");
+  const wrap = document.getElementById("wrapSerie");
+  if (!hit) return;
+  const C = serieCache;
+
+  const mover = ev => {
+    const r = svg.getBoundingClientRect();
+    const px = (ev.clientX - r.left) / r.width * GEO.w;
+    let i = Math.round(esc(px, C.x0, C.x1, 0, N-1));
+    i = Math.max(0, Math.min(N-1, i));
+    const m = S.modelo;
+    const yv = D.y[i], pv = C.mid[i];
+    cross.setAttribute("opacity", 1);
+    cross.querySelector("line").setAttribute("x1", C.X(i).toFixed(1));
+    cross.querySelector("line").setAttribute("x2", C.X(i).toFixed(1));
+    const co = cross.querySelector("#cObs"), cp = cross.querySelector("#cPre");
+    co.setAttribute("cx", C.X(i).toFixed(1)); co.setAttribute("cy", C.Y(yv).toFixed(1));
+    cp.setAttribute("cx", C.X(i).toFixed(1)); cp.setAttribute("cy", C.Y(pv).toFixed(1));
+
+    const zs = C.hs.map(hh => zhat(m,i,hh));
+    const zmax = Math.max(...zs);
+    const al = zmax > S.k, evr = D.etiqueta[i] === 1;
+    const err = pv - yv;
+    let estado, color;
+    if (al && evr){ estado = "Evento detectado"; color = "var(--good)"; }
+    else if (!al && evr){ estado = "Evento no detectado"; color = "var(--critical)"; }
+    else if (al && !evr){ estado = "Falsa alarma"; color = "var(--serious)"; }
+    else { estado = "Sin alerta, sin evento"; color = "var(--ink-muted)"; }
+
+    tip.innerHTML =
+      `<div class="tt">${fFecha(D.fechas[i])}</div>` +
+      `<div class="tr"><span><span class="sw" style="background:var(--series-1)"></span>Observada</span><span>${nf(yv,1)} MW</span></div>` +
+      `<div class="tr"><span><span class="sw" style="background:var(--series-2)"></span>Pronóstico</span><span>${nf(pv,1)} MW</span></div>` +
+      `<div class="tr"><span>Error</span><span>${(err>0?"+":"−")}${nf(Math.abs(err),1)} MW</span></div>` +
+      `<div class="tr"><span>ẑ ${C.hs.length>1?"máx.":""}</span><span>${kf(zmax)}</span></div>` +
+      `<div class="tag" style="color:${color}"><span class="sw mk" style="background:${color}"></span>${estado}</div>`;
+    tip.classList.add("on");
+    const tw = tip.offsetWidth, ancho = wrap.clientWidth;
+    let left = C.X(i) / GEO.w * ancho + 16;
+    if (left + tw > ancho) left = C.X(i) / GEO.w * ancho - tw - 16;
+    tip.style.left = Math.max(0, left) + "px";
+    tip.style.top = Math.max(0, C.Y(Math.max(yv,pv)) / C.alto * svg.getBoundingClientRect().height - 10) + "px";
+  };
+  hit.addEventListener("mousemove", mover);
+  hit.addEventListener("touchmove", e => { if (e.touches[0]) mover(e.touches[0]); }, {passive:true});
+  hit.addEventListener("mouseleave", () => {
+    cross.setAttribute("opacity", 0); tip.classList.remove("on");
+  });
+}
+
+/* ---------------- gráfico de calibración ---------------- */
+function dibujarCal(){
+  const m = S.modelo, serie = D.calib[m], rej = D.rejilla;
+  const w = 520, h = 250, ml = 44, mr = 14, mt = 14, mb = 34;
+  const x0 = ml, x1 = w-mr, y0 = mt, y1 = h-mb;
+  const vhi = Math.max(0.05, Math.max(...serie) * 1.18);
+  const X = v => esc(v, rej[0], rej[rej.length-1], x0, x1);
+  const Y = v => esc(v, 0, vhi, y1, y0);
+  let g = "";
+  for (const t of ticksY(0, vhi, 4)){
+    g += el("line", {x1:x0,x2:x1,y1:Y(t).toFixed(1),y2:Y(t).toFixed(1),
+      stroke:"var(--grid)","stroke-width":1});
+    g += txt(x0-8, Y(t)+3.5, nf(t,2), {"text-anchor":"end",
+      style:"font-variant-numeric:tabular-nums"});
+  }
+  g += txt(x0-8, y0-4, "F1", {"text-anchor":"end","font-weight":650});
+  for (const t of [-1,-0.5,0,0.5,1,1.5]){
+    g += el("line", {x1:X(t).toFixed(1),x2:X(t).toFixed(1),y1:y0,y2:y1,
+      stroke:"var(--grid)","stroke-width":1});
+    g += txt(X(t), y1+15, kf(t), {"text-anchor":"middle",
+      style:"font-variant-numeric:tabular-nums"});
+  }
+  g += txt((x0+x1)/2, h-4, "umbral de alerta k", {"text-anchor":"middle","font-weight":650});
+  g += el("line", {x1:x0,x2:x1,y1:y1,y2:y1,stroke:"var(--axis)","stroke-width":1});
+
+  // área + línea (una sola serie: sin leyenda, el título la nombra)
+  const pts = serie.map((v,i) => [X(rej[i]), Y(v)]);
+  g += el("path", {d:`M${X(rej[0]).toFixed(1)},${y1}L` +
+    pts.map(p=>`${p[0].toFixed(1)},${p[1].toFixed(1)}`).join("L") +
+    `L${X(rej[rej.length-1]).toFixed(1)},${y1}Z`,
+    fill:"var(--series-1)","fill-opacity":.10,stroke:"none"});
+  g += linea(pts, "var(--series-1)", 2);
+
+  // k calibrado y k actual
+  // La referencia del k calibrado sólo cuando difiere del actual: si coinciden,
+  // la línea sólida la tapa y los dos rótulos se enciman.
+  const ko = D.kopt[m];
+  if (ko != null && Math.abs(ko - S.k) > 1e-9){
+    g += el("line", {x1:X(ko).toFixed(1),x2:X(ko).toFixed(1),y1:y0,y2:y1,
+      stroke:"var(--ink-muted)","stroke-width":1,"stroke-dasharray":"4 3"});
+    g += txt(X(ko)+5, y0+10, `k calibrado = ${kf(ko)}`, {fill:"var(--ink-2)","font-weight":600});
+  }
+  g += el("line", {x1:X(S.k).toFixed(1),x2:X(S.k).toFixed(1),y1:y0,y2:y1,
+    stroke:"var(--accent)","stroke-width":2});
+  const j = rej.reduce((b,v,i) => Math.abs(v-S.k) < Math.abs(rej[b]-S.k) ? i : b, 0);
+  g += el("circle", {cx:X(S.k).toFixed(1), cy:Y(serie[j]).toFixed(1), r:5,
+    fill:"var(--accent)", stroke:"var(--surface-1)","stroke-width":2});
+  g += txt(X(S.k) + (S.k > 0.9 ? -6 : 6), Y(serie[j]) - 11,
+    `k = ${kf(S.k)} · F1 ${nf(serie[j],3)}`,
+    {fill:"var(--ink-1)","font-weight":650,"text-anchor": S.k > 0.9 ? "end" : "start"});
+
+  const svg = document.getElementById("svgCal");
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  svg.innerHTML = g;
+}
+
+/* ---------------- indicadores, matriz, tablas ---------------- */
+function pintarKpis(M){
+  const et = S.h ? `h = ${S.h}` : "h = 1 … 7";
+  const tiles = [
+    {l:"MAE", k:"mae", v:nf(M.mae,1), u:"MW", f:et},
+    {l:"MAPE", k:"mape", v:nf(M.mape,2), u:"%", f:et},
+    {l:"R²", k:"r2", v:nf(M.r2,3), u:"", f:M.r2 < 0 ? "peor que la media" : et},
+    {l:"BIAS", k:"bias", v:(M.bias>0?"+":"−")+nf(Math.abs(M.bias),2), u:"%",
+     f:M.bias < 0 ? "subestima el nivel" : "sobreestima el nivel"},
+    {l:"Detección", k:"det", v:`${M.vp}<small> / ${M.oportunidades}</small>`, u:"",
+     f: S.h ? `${D.eventos} eventos reales · exh. ${M.exh!=null?nf(M.exh,3):"—"}`
+            : `${D.eventos} eventos × 7 horizontes · exh. ${M.exh!=null?nf(M.exh,3):"—"}`, c:
+       M.exh == null ? "var(--ink-muted)" : M.exh >= .5 ? "var(--good)" :
+       M.exh >= .25 ? "var(--warning)" : "var(--critical)"},
+    {l:"F1", k:"f1", v:nf(M.f1,3), u:"", f:`${M.fp} falsas alarmas · prec. ${M.prec!=null?nf(M.prec,3):"—"}`}
+  ];
+  document.getElementById("kpis").innerHTML = tiles.map(t => `
+    <div class="kpi">
+      <div class="lbl">${t.c?`<span class="sw mk" style="width:8px;height:8px;background:${t.c}"></span>`:""}${t.l}${info(t.k)}</div>
+      <div class="val">${t.v}${t.u?`<small> ${t.u}</small>`:""}</div>
+      <div class="foot">${t.f}</div>
+    </div>`).join("");
+}
+
+function pintarMatriz(M){
+  const cel = (n, lbl, color, clave, hl) => `
+    <div class="cell${hl?" hl":""}">
+      <div class="cn">${nf(n)}</div>
+      <div class="cl"><span class="sw mk" style="width:8px;height:8px;background:${color}"></span>${lbl}${info(clave)}</div>
+    </div>`;
+  document.getElementById("cm").innerHTML =
+    `<div></div><div class="hd">Alerta emitida</div><div class="hd">Sin alerta</div>` +
+    `<div class="rh">Evento real${info("evento")}</div>` +
+      cel(M.vp,"Verdadero positivo","var(--good)","vp",true) +
+      cel(M.fn,"Falso negativo","var(--critical)","fn",false) +
+    `<div class="rh">Día normal</div>` +
+      cel(M.fp,"Falso positivo","var(--serious)","fp",false) +
+      cel(M.vn,"Verdadero negativo","var(--ink-muted)","vn",false);
+  document.getElementById("rates").innerHTML = [
+    ["Precisión", M.prec, "prec"], ["Exhaustividad", M.exh, "exh"], ["F1", M.f1, "f1"]
+  ].map(([l,v,c]) => `<div class="rate"><div class="rv">${v!=null?nf(v,3):"—"}</div>` +
+    `<div class="rl">${l}${info(c)}</div></div>`).join("");
+  document.getElementById("pCm").textContent = S.h
+    ? `${nf(M.n)} pronósticos evaluados en el horizonte ${S.h}, con ${D.eventos} eventos ` +
+      `extremos reales y umbral k = ${kf(S.k)}.`
+    : `${nf(M.n)} pronósticos evaluados en los siete horizontes. Los ${D.eventos} eventos ` +
+      `extremos del periodo dan ${M.oportunidades} oportunidades de detección, una por ` +
+      `horizonte. Umbral k = ${kf(S.k)}.`;
+  document.getElementById("notaCm").textContent = S.h
+    ? `${M.evDist} de los ${D.eventos} eventos fueron anticipados con ${S.h} día` +
+      `${S.h>1?"s":""} de antelación.`
+    : `${M.evDist} de los ${D.eventos} eventos fueron anticipados por al menos uno de los ` +
+      `siete horizontes; ${D.eventos-M.evDist} no generaron ninguna alerta.`;
+}
+
+function pintarTablaH(){
+  const m = S.modelo;
+  const fs = [1,2,3,4,5,6,7].map(h => ({h, ...metricas(m,h,S.k)}));
+  const mejorF1 = Math.max(...fs.map(f => f.f1));
+  const mejorMae = Math.min(...fs.map(f => f.mae));
+  document.getElementById("tabH").innerHTML =
+    `<thead><tr><th>Horizonte</th><th>MAE (MW)</th><th>MAPE</th><th>R²</th><th>BIAS</th>
+      <th>VP</th><th>FP</th><th>FN</th><th>Precisión</th><th>Exhaust.</th><th>F1</th></tr></thead><tbody>` +
+    fs.map(f => `<tr class="${S.h===f.h?"hl":""}">
+      <td>h = ${f.h}</td>
+      <td class="${f.mae===mejorMae?"best":""}">${nf(f.mae,1)}</td>
+      <td>${pf(f.mape)}</td><td>${nf(f.r2,3)}</td>
+      <td>${(f.bias>0?"+":"−")+nf(Math.abs(f.bias),2)}%</td>
+      <td>${f.vp}</td><td>${f.fp}</td><td>${f.fn}</td>
+      <td>${f.prec!=null?nf(f.prec,3):"—"}</td>
+      <td>${f.exh!=null?nf(f.exh,3):"—"}</td>
+      <td class="${f.f1===mejorF1&&mejorF1>0?"best":""}">${nf(f.f1,3)}</td></tr>`).join("") +
+    `</tbody>`;
+  const d = fs[6].f1 - fs[0].f1;
+  document.getElementById("notaH").textContent =
+    `El MAE más bajo está en h = ${fs.indexOf(fs.find(f=>f.mae===mejorMae))+1} y el F1 más alto en ` +
+    `h = ${fs.indexOf(fs.find(f=>f.f1===mejorF1))+1}. ` +
+    (Math.abs(d) < 0.02
+      ? "La capacidad de detección se mantiene estable a lo largo de la trayectoria."
+      : d < 0
+        ? `La detección se degrada ${nf(Math.abs(d),3)} puntos de F1 entre el primer y el séptimo día.`
+        : `La detección mejora ${nf(d,3)} puntos de F1 entre el primer y el séptimo día, un comportamiento que un horizonte de un solo día no permite observar.`);
+}
+
+function pintarTablaSerie(){
+  const m = S.modelo, hs = S.h ? [S.h] : [1,2,3,4,5,6,7];
+  let f = `<thead><tr><th>Fecha</th><th>Observada (MW)</th><th>Pronóstico (MW)</th>
+    <th>Error (MW)</th><th>ẑ</th><th>Alerta</th><th>Evento real</th></tr></thead><tbody>`;
+  for (let i = 0; i < N; i++){
+    let s = 0, zx = -Infinity;
+    for (const hh of hs){ s += D.yhat[m][i*H+hh-1]; zx = Math.max(zx, zhat(m,i,hh)); }
+    const pv = s/hs.length, err = pv - D.y[i];
+    f += `<tr><td>${fFecha(D.fechas[i])}</td><td>${nf(D.y[i],1)}</td><td>${nf(pv,1)}</td>
+      <td>${(err>0?"+":"−")+nf(Math.abs(err),1)}</td><td>${kf(zx)}</td>
+      <td>${zx>S.k?"sí":"no"}</td><td>${D.etiqueta[i]===1?"sí":"no"}</td></tr>`;
+  }
+  document.getElementById("tabSerie").innerHTML = f + "</tbody>";
+}
+
+/* ---------------- estado del sistema ---------------- */
+// Un origen T es utilizable cuando sus siete días objetivo caen dentro del
+// período evaluado: T+1 no puede quedar antes del primer día y T+7 no puede
+// pasarse del último.
+const J_MIN = OFF - 1, J_MAX = N - 1;
+const F0 = new Date(D.fechas[0] + "T00:00:00");
+const fechaExt = j => {
+  const d = new Date(F0); d.setDate(d.getDate() + j - OFF);
+  return d.toISOString().slice(0, 10);
+};
+
+function trayectoria(){
+  const m = S.modelo, j = S.origen, b = D.bo[j], sg = D.so[j];
+  const filas = [];
+  for (let h = 1; h <= H; h++){
+    const i = j + h - OFF;
+    const yh = D.yhat[m][i*H + h - 1];
+    const E  = b * D.f[i];                       // nivel esperado del día objetivo
+    filas.push({h, i, fecha: D.fechas[i], yh, E,
+                z: (yh / E - 1) / sg,
+                nivel: E * (1 + S.k * sg),       // demanda que dispararía la alerta
+                alerta: (yh / E - 1) / sg > S.k,
+                evento: D.etiqueta[i] === 1});
+  }
+  return {filas, yT: D.yx[j], b, sg};
+}
+
+function dibujarEstado(){
+  const {filas, yT, sg} = trayectoria();
+  const dias = filas.filter(f => f.alerta);
+
+  // --- resumen ---
+  const col = dias.length ? "var(--critical)" : "var(--good)";
+  document.getElementById("estRes").innerHTML = `
+    <div class="est-l">Última demanda observada</div>
+    <div class="est-v">${nf(yT, 1)}<small> MW</small></div>
+    <div class="est-f">${fFecha(fechaExt(S.origen))} · origen del pronóstico</div>
+    <div class="est-sep"></div>
+    <div class="est-l">Estado de la alerta ${info("k")}</div>
+    <div class="badge" style="color:${col};border-color:${col};
+         background:color-mix(in srgb, ${col} 8%, transparent)">
+      <span class="sw mk" style="background:${col}"></span>
+      ${dias.length
+        ? `Alerta en ${dias.length} de los próximos 7 días`
+        : "Sin alerta en los próximos 7 días"}
+    </div>
+    ${dias.length ? `<div class="est-f" style="margin-top:7px">` +
+      dias.map(f => `${fFecha(f.fecha).replace(/ \d{4}$/,"")} (T+${f.h})`).join(" · ") +
+      `</div>` : ""}`;
+
+  // --- gráfico de desviación ---
+  const w = 560, h = 210, ml = 40, mr = 12, mt = 22, mb = 42;
+  const x0 = ml, x1 = w - mr, y0 = mt, y1 = h - mb;
+  const zs = filas.map(f => f.z);
+  let lo = Math.min(...zs, 0, S.k), hi = Math.max(...zs, 0, S.k);
+  const pad = Math.max(0.25, (hi - lo) * 0.22); lo -= pad; hi += pad;
+  const Y = v => esc(v, lo, hi, y1, y0);
+  const slot = (x1 - x0) / H, bw = Math.min(slot * 0.5, 40);
+
+  let g = "";
+  for (const t of ticksY(lo, hi, 4)){
+    g += el("line", {x1:x0, x2:x1, y1:Y(t).toFixed(1), y2:Y(t).toFixed(1),
+      stroke:"var(--grid)", "stroke-width":1});
+    g += txt(x0-8, Y(t)+3.5, kf(t), {"text-anchor":"end",
+      style:"font-variant-numeric:tabular-nums"});
+  }
+  g += txt(x0-8, y0-6, "ẑ", {"text-anchor":"end", "font-weight":650});
+
+  // columnas ancladas en cero, extremo de dato redondeado
+  for (const f of filas){
+    const x = x0 + slot*(f.h - 0.5) - bw/2;
+    const yb = Y(0), yv = Y(f.z), arriba = yv < yb;
+    const r = Math.min(4, bw/2, Math.abs(yv - yb));
+    const c = f.alerta ? "var(--critical)" : "var(--series-1)";
+    g += el("path", {fill:c, d: arriba
+      ? `M${x},${yb}L${x},${(yv+r).toFixed(1)}Q${x},${yv.toFixed(1)} ${(x+r).toFixed(1)},${yv.toFixed(1)}`
+        + `L${(x+bw-r).toFixed(1)},${yv.toFixed(1)}Q${(x+bw).toFixed(1)},${yv.toFixed(1)} ${(x+bw).toFixed(1)},${(yv+r).toFixed(1)}L${(x+bw).toFixed(1)},${yb}Z`
+      : `M${x},${yb}L${x},${(yv-r).toFixed(1)}Q${x},${yv.toFixed(1)} ${(x+r).toFixed(1)},${yv.toFixed(1)}`
+        + `L${(x+bw-r).toFixed(1)},${yv.toFixed(1)}Q${(x+bw).toFixed(1)},${yv.toFixed(1)} ${(x+bw).toFixed(1)},${(yv-r).toFixed(1)}L${(x+bw).toFixed(1)},${yb}Z`});
+    // el color nunca va solo: la columna en alerta se rotula
+    if (f.alerta)
+      g += txt(x + bw/2, Y(f.z) - 7, "alerta", {"text-anchor":"middle",
+        fill:"var(--critical)", "font-weight":650, "font-size":9.5});
+    g += txt(x + bw/2, y1 + 15, `T+${f.h}`, {"text-anchor":"middle", "font-weight":650});
+    g += txt(x + bw/2, y1 + 27, fFecha(f.fecha).replace(/ \d{4}$/,""),
+      {"text-anchor":"middle", "font-size":9.5});
+  }
+  g += el("line", {x1:x0, x2:x1, y1:Y(0).toFixed(1), y2:Y(0).toFixed(1),
+    stroke:"var(--axis)", "stroke-width":1});
+  g += el("line", {x1:x0, x2:x1, y1:Y(S.k).toFixed(1), y2:Y(S.k).toFixed(1),
+    stroke:"var(--accent)", "stroke-width":2, "stroke-dasharray":"5 3"});
+  g += txt(x1, Y(S.k) - 6, `umbral k = ${kf(S.k)}`, {"text-anchor":"end",
+    fill:"var(--accent)", "font-weight":650});
+
+  const svg = document.getElementById("svgEst");
+  svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  svg.innerHTML = g;
+
+  // --- trayectoria en tabla ---
+  document.getElementById("tabEst").innerHTML =
+    `<thead><tr><th>Día</th><th>Fecha</th><th>Pronóstico (MW)</th>
+      <th>Nivel esperado (MW)</th><th>Dispara sobre (MW)</th><th>ẑ</th>
+      <th>Estado</th></tr></thead><tbody>` +
+    filas.map(f => `<tr class="${f.alerta?"hl":""}">
+      <td>T+${f.h}</td><td>${fFecha(f.fecha)}</td><td>${nf(f.yh,1)}</td>
+      <td>${nf(f.E,1)}</td><td>${nf(f.nivel,1)}</td><td>${kf(f.z)}</td>
+      <td>${f.alerta ? "Alerta" : "Normal"}</td></tr>`).join("") + `</tbody>`;
+
+  // --- por qué se emite, o por qué no: la aritmética del día, con sus cifras ---
+  const porque = document.getElementById("porque");
+  if (dias.length){
+    porque.innerHTML = dias.map(f => {
+      const exceso = f.yh - f.E;
+      return `<p><b>${fFecha(f.fecha)} (T+${f.h}).</b> Se pronostican ${nf(f.yh,1)} MW para un ` +
+        `día cuyo nivel esperado es ${nf(f.E,1)} MW: un exceso de ${nf(exceso,1)} MW, ` +
+        `equivalente a ${kf(f.z)} desviaciones típicas. Como el umbral está en ${kf(S.k)}, ` +
+        `se emite alerta con ${f.h} día${f.h>1?"s":""} de antelación.</p>`;
+    }).join("");
+  } else {
+    const cerca = filas.reduce((a, f) => f.z > a.z ? f : a, filas[0]);
+    const falta = cerca.nivel - cerca.yh;
+    porque.innerHTML = `<p><b>Ningún día alcanza el umbral.</b> El más cercano es el ` +
+      `${fFecha(cerca.fecha)} (T+${cerca.h}), con ẑ = ${kf(cerca.z)} frente a un umbral de ` +
+      `${kf(S.k)}. Para disparar la alerta, el pronóstico de ese día habría tenido que llegar ` +
+      `a ${nf(cerca.nivel,1)} MW en lugar de ${nf(cerca.yh,1)}, es decir ${nf(falta,1)} MW más.</p>`;
+  }
+
+  document.getElementById("pEstado").textContent =
+    `Última observación disponible y los siete días que siguen, con el nivel esperado ` +
+    `b · f de cada día objetivo y la demanda que dispararía la alerta. El nivel base y la ` +
+    `dispersión quedan congelados en el origen, de modo que todo lo que se muestra es ` +
+    `calculable el mismo día T.`;
+  document.getElementById("notaEst").textContent =
+    `Modelo ${S.modelo} · umbral k = ${kf(S.k)} · dispersión en el origen σ = ${nf(sg,4)} · ` +
+    `serie observada hasta el ${fFecha(D.fechas[N-1])}. ` +
+    `Este panel recorre siempre los siete horizontes; el selector de horizonte de arriba ` +
+    `afecta al resto del tablero.`;
+}
+
+/* ---------------- render ---------------- */
+function render(){
+  const M = metricas(S.modelo, S.h, S.k);
+  document.getElementById("kVal").textContent = kf(S.k);
+  const ko = D.kopt[S.modelo];
+  document.getElementById("kHint").textContent =
+    ko != null && Math.abs(S.k-ko) < 1e-9 ? "valor calibrado" : "ajustado a mano";
+  document.getElementById("kCal").innerHTML = ko == null ? "" :
+    `Calibrado sobre validación 2025 en <b>k = ${kf(ko)}</b> para ${S.modelo}. ` +
+    (Math.abs(S.k-ko) < 1e-9 ? "" : `<button type="button" id="btnK">Volver al valor calibrado</button>`);
+  const b = document.getElementById("btnK");
+  if (b) b.onclick = () => { S.k = ko; document.getElementById("rngK").value = ko; render(); };
+  dibujarEstado(); pintarKpis(M); pintarMatriz(M); dibujarSerie(); dibujarCal();
+  pintarTablaH(); pintarTablaSerie(); anclarAyuda();
+}
+
+// El diseño se reacomoda según el ancho, así que el borde al que se ancla cada
+// globo se mide en vez de fijarse: centrado salvo que se saliera de la pantalla.
+function anclarAyuda(){
+  const W = document.documentElement.clientWidth, ANCHO = 238, M = 12;
+  for (const el of document.querySelectorAll(".info")){
+    if (!el.offsetParent) continue;                 // oculto en pantallas angostas
+    el.classList.remove("izq", "der");
+    const c = el.getBoundingClientRect(), centro = c.left + c.width/2;
+    if (centro - ANCHO/2 < M) el.classList.add("izq");
+    else if (centro + ANCHO/2 > W - M) el.classList.add("der");
+  }
+}
+
+/* ---------------- controles ---------------- */
+const sel = document.getElementById("selModelo");
+sel.innerHTML = D.modelos.map(m => `<option${m===S.modelo?" selected":""}>${m}</option>`).join("");
+sel.onchange = () => {
+  S.modelo = sel.value;
+  const ko = D.kopt[S.modelo];
+  if (ko != null){ S.k = ko; document.getElementById("rngK").value = ko; }
+  render();
+};
+
+const seg = document.getElementById("segH");
+seg.innerHTML = [[0,"Todos"]].concat([1,2,3,4,5,6,7].map(h => [h,String(h)]))
+  .map(([v,l]) => `<button type="button" data-h="${v}" aria-pressed="${S.h===v}">${l}</button>`).join("");
+seg.onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.h = +b.dataset.h;
+  [...seg.children].forEach(x => x.setAttribute("aria-pressed", +x.dataset.h === S.h));
+  render();
+};
+
+const rng = document.getElementById("rngK");
+rng.value = S.k;
+rng.oninput = () => { S.k = +rng.value; render(); };
+
+// Selector propio en vez de <input type="date">: el nativo se dibuja en el
+// idioma del navegador y mostraría 07/24/2026 a quien lo tenga en inglés.
+const selO = document.getElementById("selOrigen");
+{
+  const op = [];
+  for (let j = J_MAX; j >= J_MIN; j--)                 // el más reciente arriba
+    op.push(`<option value="${j}"${j===S.origen?" selected":""}>${fFecha(fechaExt(j))}</option>`);
+  selO.innerHTML = op.join("");
+}
+selO.onchange = () => { S.origen = +selO.value; render(); };
+document.getElementById("btnUltimo").onclick = () => {
+  S.origen = J_MAX; selO.value = J_MAX; render();
+};
+
+const bt = document.getElementById("tema");
+const aplicarTema = t => {
+  document.documentElement.setAttribute("data-theme", t);
+  bt.textContent = t === "dark" ? "Modo claro" : "Modo oscuro";
+};
+bt.onclick = () => aplicarTema(
+  document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+aplicarTema(matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+
+document.getElementById("glosario").innerHTML = Object.values(DEF)
+  .map(([t, d]) => `<dt>${t}</dt><dd>${d}</dd>`).join("");
+
+document.getElementById("fEval").textContent = nf(N*H);
+document.getElementById("fEv").textContent = nf(D.eventos);
+
+let rt; addEventListener("resize", () => {
+  clearTimeout(rt);
+  rt = setTimeout(() => { dibujarSerie(); anclarAyuda(); }, 140);
+});
+render();
+</script>
+</body>
+</html>
